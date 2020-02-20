@@ -1,0 +1,2 @@
+FILE(GLOB_RECURSE SRC *.cc)
+ADD_LIBRARY(objaddon OBJECT ${SRC})
