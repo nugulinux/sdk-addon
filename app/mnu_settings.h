@@ -7,12 +7,12 @@
 extern "C" {
 #endif
 
-#define AGENT_NAME_SYSTEM "SystemAgent"
-#define AGENT_NAME_ASR "ASRAgent"
-#define AGENT_NAME_TTS "TTSAgent"
-#define AGENT_NAME_TEXT "TextAgent"
-#define AGENT_NAME_AUDIOPLAYER "AudioPlayerAgent"
-#define AGENT_NAME_BATTERY "BatteryAgent"
+#define AGENT_NAME_SYSTEM "System"
+#define AGENT_NAME_ASR "ASR"
+#define AGENT_NAME_TTS "TTS"
+#define AGENT_NAME_TEXT "Text"
+#define AGENT_NAME_AUDIOPLAYER "AudioPlayer"
+#define AGENT_NAME_BATTERY "Battery"
 
 void settings_init(void);
 

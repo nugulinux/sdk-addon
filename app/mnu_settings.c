@@ -12,7 +12,7 @@ static char data_tts_agent[MENU_DATA_SIZE] = "1";
 static char data_text_agent[MENU_DATA_SIZE] = "1";
 static char data_audioplayer_agent[MENU_DATA_SIZE] = "1";
 
-static char data_battery_agent[MENU_DATA_SIZE] = "0";
+static char data_battery_agent[MENU_DATA_SIZE] = "1";
 
 static char data_model_path[MENU_DATA_SIZE] = "/var/lib/nugu/model";
 
@@ -75,7 +75,7 @@ static int run_log_module_update(Stackmenu *mm, StackmenuItem *menu,
 }
 
 static StackmenuItem menu_settings[] = {
-	{ "*", " System" },
+	{ "*", " System settings" },
 	{ "tok", "Token", NULL, NULL, data_token },
 	{ "log", "SDK Log system", NULL, run_log_system_update, data_log },
 	{ "_", "(none,stderr,syslog)" },
@@ -83,13 +83,15 @@ static StackmenuItem menu_settings[] = {
 	  data_log_module },
 	{ "_", "(default,network,network_trace,protocol,audio,all)" },
 	{ "-" },
-	{ "*", " Enable/Disable capability agents" },
+	{ "*", " Enable / Disable capability agents - Built-in" },
 	{ "1", AGENT_NAME_SYSTEM, NULL, NULL, data_system_agent },
 	{ "2", AGENT_NAME_ASR, NULL, NULL, data_asr_agent },
 	{ "mod", " - Set model file path", NULL, NULL, data_model_path },
 	{ "3", AGENT_NAME_TTS, NULL, NULL, data_tts_agent },
 	{ "4", AGENT_NAME_TEXT, NULL, NULL, data_text_agent },
 	{ "5", AGENT_NAME_AUDIOPLAYER, NULL, NULL, data_audioplayer_agent },
+	{ "-" },
+	{ "*", " Enable / Disable capability agents - Add-on" },
 	{ "6", AGENT_NAME_BATTERY, NULL, NULL, data_battery_agent },
 	NULL
 };

@@ -7,6 +7,8 @@
 
 #include "stackmenu.h"
 #include "mnu_settings.h"
+#include "mnu_builtin.hh"
+#include "mnu_addon.hh"
 #include "sdk_control.h"
 
 static int run_status(Stackmenu *mm, StackmenuItem *menu, void *user_data)
@@ -80,13 +82,13 @@ static StackmenuItem menu_main[] = {
 	{ "-" },
 	{ "set", "Change settings" },
 	{ "-" },
-	{ "2", "SDK initialize", NULL, run_sdk_init },
-	{ "3", "SDK de-initialize", NULL, run_sdk_deinit },
-	{ "4", "SDK network connect", NULL, run_sdk_connect },
-	{ "5", "SDK network disconnect", NULL, run_sdk_disconnect },
+	{ "1", "SDK initialize", NULL, run_sdk_init },
+	{ "2", "SDK de-initialize", NULL, run_sdk_deinit },
+	{ "3", "SDK network connect", NULL, run_sdk_connect },
+	{ "4", "SDK network disconnect", NULL, run_sdk_disconnect },
 	{ "-" },
-	{ "b", "Control built-in capability agents (TODO)", NULL },
-	{ "a", "Control add-on capability agents (TODO)", NULL },
+	{ "b", "Control built-in capability agents", NULL },
+	{ "a", "Control add-on capability agents", NULL },
 	NULL
 };
 
@@ -101,6 +103,14 @@ int main(int argc, char *argv[])
 	item = stackmenu_item_find(menu_main, "set");
 	if (item)
 		item->sub_menu = settings_get_stackmenu();
+
+	item = stackmenu_item_find(menu_main, "b");
+	if (item)
+		item->sub_menu = builtin_get_stackmenu();
+
+	item = stackmenu_item_find(menu_main, "a");
+	if (item)
+		item->sub_menu = addon_get_stackmenu();
 
 	loop = g_main_loop_new(NULL, FALSE);
 	mm = stackmenu_new(menu_main, loop);

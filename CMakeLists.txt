@@ -57,6 +57,7 @@ ADD_COMPILE_OPTIONS(
 	-Wformat=2 -Wno-format-nonliteral
 
 	# Not warnings
+	-Wno-write-strings
 	-Wno-missing-field-initializers
 	-Wno-missing-braces
 	-Wno-unused-parameter)
