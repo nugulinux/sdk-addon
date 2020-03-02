@@ -1,3 +1,6 @@
+#include <string.h>
+#include <stdlib.h>
+
 #include <base/nugu_log.h>
 
 #include "mnu_settings.h"
