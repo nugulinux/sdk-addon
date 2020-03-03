@@ -25,20 +25,6 @@ static const char* CAPABILITY_VERSION = "1.0";
 BatteryAgent::BatteryAgent()
     : Capability(CAPABILITY_NAME, CAPABILITY_VERSION)
 {
-    // TODO : implements service logic
-}
-
-BatteryAgent::~BatteryAgent()
-{
-    // TODO : implements service logic
-}
-
-void BatteryAgent::initialize()
-{
-}
-
-void BatteryAgent::deInitialize()
-{
 }
 
 void BatteryAgent::setCapabilityListener(ICapabilityListener* clistener)

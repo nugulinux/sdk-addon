@@ -1,0 +1,60 @@
+/*
+ * Copyright (c) 2019 SK Telecom Co., Ltd. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef __NUGU_EXTENSION_AGENT_H__
+#define __NUGU_EXTENSION_AGENT_H__
+
+#include <clientkit/capability.hh>
+
+using namespace NuguClientKit;
+
+enum class ExtensionResult {
+    SUCCEEDED,
+    FAILED
+};
+
+class IExtensionListener : public ICapabilityListener {
+public:
+    virtual ~IExtensionListener() = default;
+
+    virtual ExtensionResult receiveAction(std::string& data) = 0;
+    virtual void requestContext(std::string& data) = 0;
+};
+
+class ExtensionAgent final : public Capability {
+public:
+    ExtensionAgent();
+    virtual ~ExtensionAgent() = default;
+
+    void parsingDirective(const char* dname, const char* message) override;
+    void updateInfoForContext(Json::Value& ctx) override;
+    void setCapabilityListener(ICapabilityListener* clistener) override;
+
+    void sendCommandToPlay(const std::string& data);
+
+private:
+    void sendEventCommon(const std::string& ename, EventResultCallback cb = nullptr);
+    void sendEventActionSucceeded(EventResultCallback cb = nullptr);
+    void sendEventActionFailed(EventResultCallback cb = nullptr);
+    void sendEventCommandIssued(const std::string& data, EventResultCallback cb = nullptr);
+    void parsingAction(const char* message);
+
+    IExtensionListener* extension_listener;
+    std::string ext_data;
+    std::string ps_id;
+};
+
+#endif /* __NUGU_EXTENSION_AGENT_H__ */

@@ -14,37 +14,38 @@
  * limitations under the License.
  */
 
-#ifndef __NUGU_BATTERY_AGENT_H__
-#define __NUGU_BATTERY_AGENT_H__
-
-#include <vector>
+#ifndef __NUGU_DELEGATION_AGENT_H__
+#define __NUGU_DELEGATION_AGENT_H__
 
 #include <clientkit/capability.hh>
 
 using namespace NuguClientKit;
 
-class IBatteryListener : public ICapabilityListener {
+class IDelegationListener : public ICapabilityListener {
 public:
-    virtual ~IBatteryListener() = default;
+    virtual ~IDelegationListener() = default;
+
+    virtual void delegate(const std::string& app_id, const std::string& ps_id, const std::string& data) = 0;
+    virtual bool requestContext(std::string& ps_id, std::string& data) = 0;
 };
 
-class BatteryAgent : public Capability {
+class DelegationAgent final : public Capability {
 public:
-    BatteryAgent();
-    virtual ~BatteryAgent() = default;
+    DelegationAgent();
+    virtual ~DelegationAgent() = default;
 
     void setCapabilityListener(ICapabilityListener* clistener) override;
     void updateInfoForContext(Json::Value& ctx) override;
+    std::string getContextInfo() override;
+    void parsingDirective(const char* dname, const char* message) override;
 
-    void setBatteryLevel(const std::string& level);
-    void setCharging(bool charging);
+    bool request();
 
 private:
-    std::string battery_level = "10";
-    bool battery_charging = false;
-    SuspendPolicy suspend_policy = SuspendPolicy::STOP;
+    void parsingDelegate(const char* message);
+    bool sendEventRequest(EventResultCallback cb = nullptr);
 
-    IBatteryListener* battery_listener = nullptr;
+    IDelegationListener* delegation_listener = nullptr;
 };
 
-#endif /* __NUGU_BATTERY_AGENT_H__ */
+#endif /* __NUGU_DELEGATION_AGENT_H__ */

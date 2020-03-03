@@ -16,6 +16,9 @@ static char data_text_agent[MENU_DATA_SIZE] = "1";
 static char data_audioplayer_agent[MENU_DATA_SIZE] = "1";
 
 static char data_battery_agent[MENU_DATA_SIZE] = "1";
+static char data_location_agent[MENU_DATA_SIZE] = "1";
+static char data_delegation_agent[MENU_DATA_SIZE] = "1";
+static char data_extension_agent[MENU_DATA_SIZE] = "1";
 
 static char data_model_path[MENU_DATA_SIZE] = "/var/lib/nugu/model";
 
@@ -96,6 +99,9 @@ static StackmenuItem menu_settings[] = {
 	{ "-" },
 	{ "*", " Enable / Disable capability agents - Add-on" },
 	{ "6", AGENT_NAME_BATTERY, NULL, NULL, data_battery_agent },
+	{ "7", AGENT_NAME_LOCATION, NULL, NULL, data_location_agent },
+	{ "8", AGENT_NAME_DELEGATION, NULL, NULL, data_delegation_agent },
+	{ "9", AGENT_NAME_EXTENSION, NULL, NULL, data_extension_agent },
 	NULL
 };
 

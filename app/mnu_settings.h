@@ -13,6 +13,9 @@ extern "C" {
 #define AGENT_NAME_TEXT "Text"
 #define AGENT_NAME_AUDIOPLAYER "AudioPlayer"
 #define AGENT_NAME_BATTERY "Battery"
+#define AGENT_NAME_LOCATION "Location"
+#define AGENT_NAME_DELEGATION "Delegation"
+#define AGENT_NAME_EXTENSION "Extension"
 
 void settings_init(void);
 
