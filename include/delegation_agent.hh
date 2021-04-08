@@ -36,14 +36,14 @@ public:
 
     void setCapabilityListener(ICapabilityListener* clistener) override;
     void updateInfoForContext(Json::Value& ctx) override;
-    std::string getContextInfo() override;
     void parsingDirective(const char* dname, const char* message) override;
 
-    bool request();
+    bool request(const std::string& ps_id, const std::string& data);
 
 private:
     void parsingDelegate(const char* message);
-    bool sendEventRequest(EventResultCallback cb = nullptr);
+
+    bool sendEventRequest(const std::string& ps_id, const std::string& data, EventResultCallback cb = nullptr);
 
     IDelegationListener* delegation_listener = nullptr;
 };

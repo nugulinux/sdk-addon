@@ -36,12 +36,15 @@ public:
     void setCapabilityListener(ICapabilityListener* clistener) override;
     void updateInfoForContext(Json::Value& ctx) override;
 
-    void setBatteryLevel(const std::string& level);
+    void setBatteryLevel(int level);
     void setCharging(bool charging);
+    void setBatteryApproximateLevel(int level);
+
 
 private:
-    std::string battery_level = "10";
+    int battery_level = -1;
     bool battery_charging = false;
+    int battery_approximate_level = -1;
     SuspendPolicy suspend_policy = SuspendPolicy::STOP;
 
     IBatteryListener* battery_listener = nullptr;
