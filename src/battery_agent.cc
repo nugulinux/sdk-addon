@@ -14,13 +14,10 @@
  * limitations under the License.
  */
 
-#include <algorithm>
-#include <iostream>
-
 #include "battery_agent.hh"
 
 static const char* CAPABILITY_NAME = "Battery";
-static const char* CAPABILITY_VERSION = "1.0";
+static const char* CAPABILITY_VERSION = "1.1";
 
 BatteryAgent::BatteryAgent()
     : Capability(CAPABILITY_NAME, CAPABILITY_VERSION)
@@ -38,14 +35,15 @@ void BatteryAgent::updateInfoForContext(Json::Value& ctx)
     Json::Value battery;
 
     battery["version"] = getVersion();
-    battery["level"] = battery_level;
+    if (battery_level >= 0 && battery_level <= 100)
+        battery["level"] = battery_level;
     battery["charging"] = battery_charging;
+    if (battery_approximate_level >= 0)
+        battery["approximateLevel"] = battery_approximate_level;
     ctx[getName()] = battery;
-
-    std::cout << ">> Collecting BatteryAgent Context Info : " << battery << std::endl;
 }
 
-void BatteryAgent::setBatteryLevel(const std::string& level)
+void BatteryAgent::setBatteryLevel(int level)
 {
     battery_level = level;
 }
@@ -53,4 +51,9 @@ void BatteryAgent::setBatteryLevel(const std::string& level)
 void BatteryAgent::setCharging(bool charging)
 {
     battery_charging = charging;
+}
+
+void BatteryAgent::setBatteryApproximateLevel(int level)
+{
+    battery_approximate_level = level;
 }
