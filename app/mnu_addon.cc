@@ -1,6 +1,5 @@
 #include "battery_agent.hh"
 #include "delegation_agent.hh"
-#include "extension_agent.hh"
 #include "location_agent.hh"
 
 #include "mnu_addon.hh"
@@ -10,12 +9,12 @@ using namespace NuguClientKit;
 
 static char data_battery_level[MENU_DATA_SIZE] = "1";
 static char data_battery_charging[MENU_DATA_SIZE] = "1";
-static char data_extension_data[MENU_DATA_SIZE] = "extension_data";
+static char data_delegation_psid[MENU_DATA_SIZE] = "nugu.delegation.service";
+static char data_delegation_data[MENU_DATA_SIZE] = "{ \"action\": \"test\" }";
 
 static BatteryAgent* battery_agent;
 static LocationAgent* location_agent;
 static DelegationAgent* delegation_agent;
-static ExtensionAgent* extension_agent;
 
 static int run_battery_level(Stackmenu* mm, StackmenuItem* menu, void* user_data)
 {
@@ -23,7 +22,7 @@ static int run_battery_level(Stackmenu* mm, StackmenuItem* menu, void* user_data
         return -1;
 
     printf("setBatteryLevel(%s)\n", data_battery_level);
-    battery_agent->setBatteryLevel(data_battery_level);
+    battery_agent->setBatteryLevel(strtol(data_battery_level, NULL, 10));
 
     return 0;
 }
@@ -50,18 +49,8 @@ static int run_delegation_request(Stackmenu* mm, StackmenuItem* menu, void* user
     if (!delegation_agent)
         return -1;
 
-    if (delegation_agent->request() == false)
+    if (delegation_agent->request(data_delegation_psid, data_delegation_data) == false)
         return -1;
-
-    return 0;
-}
-
-static int run_extension_send_command(Stackmenu* mm, StackmenuItem* menu, void* user_data)
-{
-    if (!extension_agent)
-        return -1;
-
-    extension_agent->sendCommandToPlay(data_extension_data);
 
     return 0;
 }
@@ -78,8 +67,6 @@ static StackmenuItem menu_addon[] = {
     { "*", " " AGENT_NAME_DELEGATION },
     { "3", "request", NULL, run_delegation_request },
     { "-" },
-    { "*", " " AGENT_NAME_EXTENSION },
-    { "4", "sendCommandToPlay", NULL, run_extension_send_command },
     NULL
 };
 
@@ -102,13 +89,9 @@ int addon_init(NuguClientKit::NuguClient::CapabilityBuilder* builder)
     if (settings_is_agent_enabled(AGENT_NAME_DELEGATION))
         delegation_agent = new DelegationAgent();
 
-    if (settings_is_agent_enabled(AGENT_NAME_EXTENSION))
-        extension_agent = new ExtensionAgent();
-
     builder->add(battery_agent)
         ->add(location_agent)
-        ->add(delegation_agent)
-        ->add(extension_agent);
+        ->add(delegation_agent);
 
     return 0;
 }
@@ -128,10 +111,5 @@ void addon_deinit(void)
     if (delegation_agent) {
         delete delegation_agent;
         delegation_agent = nullptr;
-    }
-
-    if (extension_agent) {
-        delete extension_agent;
-        extension_agent = nullptr;
     }
 }

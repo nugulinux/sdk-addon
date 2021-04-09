@@ -2,6 +2,7 @@
 
 #include <capability/asr_interface.hh>
 #include <capability/audio_player_interface.hh>
+#include <capability/extension_interface.hh>
 #include <capability/system_interface.hh>
 #include <capability/text_interface.hh>
 #include <capability/tts_interface.hh>
@@ -22,12 +23,15 @@ static char data_audio_repeat[MENU_DATA_SIZE] = "one";
 static char data_audio_shuffle[MENU_DATA_SIZE] = "1";
 static char data_audio_volume[MENU_DATA_SIZE] = "50";
 static char data_audio_mute[MENU_DATA_SIZE] = "1";
+static char data_extension_psid[MENU_DATA_SIZE] = "nugu.extension.service";
+static char data_extension_data[MENU_DATA_SIZE] = "extension_data";
 
 static ISystemHandler* system_handler;
 static IASRHandler* asr_handler;
 static ITTSHandler* tts_handler;
 static ITextHandler* text_handler;
 static IAudioPlayerHandler* audioplayer_handler;
+static IExtensionHandler* extension_handler;
 
 static int run_system_sync(Stackmenu* mm, StackmenuItem* menu, void* user_data)
 {
@@ -44,7 +48,7 @@ static int run_system_disconnect(Stackmenu* mm, StackmenuItem* menu, void* user_
     if (!system_handler)
         return -1;
 
-    system_handler->disconnect();
+    //system_handler->disconnect();
 
     return 0;
 }
@@ -64,8 +68,7 @@ static int run_asr_start_recognition(Stackmenu* mm, StackmenuItem* menu, void* u
     if (!asr_handler)
         return -1;
 
-    if (asr_handler->startRecognition() == false)
-        return -1;
+    asr_handler->startRecognition();
 
     return 0;
 }
@@ -105,7 +108,7 @@ static int run_tts_volume(Stackmenu* mm, StackmenuItem* menu, void* user_data)
     if (!tts_handler)
         return -1;
 
-    if (tts_handler->setVolume(atoi(data_tts_volume)) == false)
+    if (tts_handler->setVolume(strtol(data_tts_volume, NULL, 10)) == false)
         return -1;
 
     return 0;
@@ -116,7 +119,7 @@ static int run_text_request(Stackmenu* mm, StackmenuItem* menu, void* user_data)
     if (!text_handler)
         return -1;
 
-    if (text_handler->requestTextInput(data_text_text) == false)
+    if (text_handler->requestTextInput(data_text_text) == "")
         return -1;
 
     return 0;
@@ -187,7 +190,7 @@ static int run_audio_seek(Stackmenu* mm, StackmenuItem* menu, void* user_data)
     if (!audioplayer_handler)
         return -1;
 
-    audioplayer_handler->seek(atoi(data_audio_seek));
+    audioplayer_handler->seek(strtol(data_audio_seek, NULL, 10));
 
     return 0;
 }
@@ -198,9 +201,9 @@ static int run_audio_favorite(Stackmenu* mm, StackmenuItem* menu, void* user_dat
         return -1;
 
     if (data_audio_favorite[0] == '1')
-        audioplayer_handler->setFavorite(true);
+        audioplayer_handler->requestFavoriteCommand(true);
     else if (data_audio_favorite[0] == '0')
-        audioplayer_handler->setFavorite(false);
+        audioplayer_handler->requestFavoriteCommand(false);
     else
         return -1;
 
@@ -213,11 +216,11 @@ static int run_audio_repeat(Stackmenu* mm, StackmenuItem* menu, void* user_data)
         return -1;
 
     if (g_strcmp0(data_audio_repeat, "none") == 0)
-        audioplayer_handler->setRepeat(RepeatType::NONE);
+        audioplayer_handler->requestRepeatCommand(RepeatType::NONE);
     else if (g_strcmp0(data_audio_repeat, "one") == 0)
-        audioplayer_handler->setRepeat(RepeatType::ONE);
+        audioplayer_handler->requestRepeatCommand(RepeatType::ONE);
     else if (g_strcmp0(data_audio_repeat, "all") == 0)
-        audioplayer_handler->setRepeat(RepeatType::ALL);
+        audioplayer_handler->requestRepeatCommand(RepeatType::ALL);
     else
         return -1;
 
@@ -230,9 +233,9 @@ static int run_audio_shuffle(Stackmenu* mm, StackmenuItem* menu, void* user_data
         return -1;
 
     if (data_audio_shuffle[0] == '1')
-        audioplayer_handler->setShuffle(true);
+        audioplayer_handler->requestShuffleCommand(true);
     else if (data_audio_shuffle[0] == '0')
-        audioplayer_handler->setShuffle(false);
+        audioplayer_handler->requestShuffleCommand(false);
     else
         return -1;
 
@@ -244,7 +247,7 @@ static int run_audio_volume(Stackmenu* mm, StackmenuItem* menu, void* user_data)
     if (!audioplayer_handler)
         return -1;
 
-    audioplayer_handler->setVolume(atoi(data_audio_volume));
+    audioplayer_handler->setVolume(strtol(data_audio_volume, NULL, 10));
 
     return 0;
 }
@@ -260,6 +263,16 @@ static int run_audio_mute(Stackmenu* mm, StackmenuItem* menu, void* user_data)
         audioplayer_handler->setMute(false);
     else
         return -1;
+
+    return 0;
+}
+
+static int run_extension_send_command(Stackmenu* mm, StackmenuItem* menu, void* user_data)
+{
+    if (!extension_handler)
+        return -1;
+
+    extension_handler->commandIssued(data_extension_psid, data_extension_data);
 
     return 0;
 }
@@ -317,6 +330,9 @@ static StackmenuItem menu_builtin[] = {
     { "-" },
     { "7", AGENT_NAME_TTS, menu_builtin_tts },
     { "8", AGENT_NAME_AUDIOPLAYER, menu_builtin_audio },
+    { "-" },
+    { "*", " " AGENT_NAME_EXTENSION },
+    { "9", "commandIssued", NULL, run_extension_send_command },
     NULL
 };
 
@@ -348,11 +364,15 @@ int builtin_init(NuguClientKit::NuguClient::CapabilityBuilder* builder)
     if (settings_is_agent_enabled(AGENT_NAME_AUDIOPLAYER))
         audioplayer_handler = CapabilityFactory::makeCapability<AudioPlayerAgent, IAudioPlayerHandler>();
 
+    if (settings_is_agent_enabled(AGENT_NAME_EXTENSION))
+        extension_handler = CapabilityFactory::makeCapability<ExtensionAgent, IExtensionHandler>();
+
     builder->add(system_handler)
         ->add(asr_handler)
         ->add(tts_handler)
         ->add(text_handler)
-        ->add(audioplayer_handler);
+        ->add(audioplayer_handler)
+        ->add(extension_handler);
 
     return 0;
 }
@@ -382,5 +402,10 @@ void builtin_deinit(void)
     if (audioplayer_handler) {
         delete audioplayer_handler;
         audioplayer_handler = nullptr;
+    }
+
+    if (extension_handler) {
+        delete extension_handler;
+        extension_handler = nullptr;
     }
 }
