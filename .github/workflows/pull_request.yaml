@@ -20,10 +20,52 @@ jobs:
       - name: Run clang-tidy review
         uses: kimhyungrok/clang-tidy-action@v1.1
         with:
-            exclude: 'app/stackmenu'
-        with:
+          exclude: 'app/stackmenu'
           pre-command:
             "echo deb [trusted=yes] https://nugulinux.github.io/sdk-unstable/ubuntu/ bionic main \
             | tee /etc/apt/sources.list.d/nugu-unstable.list; \
             apt update; \
             apt install -y libnugu-dev"
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [checkpatch_review, clang_tidy_review]
+    strategy:
+      fail-fast: true
+      matrix:
+        target:
+          [
+            xenial,
+            #arm64_xenial,
+            #armhf_xenial,
+            bionic,
+            #arm64_bionic,
+            #armhf_bionic,
+          ]
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Build
+        run: |
+          IMAGE=nugulinux/devenv:${{ matrix.target }}
+          DIST=$(echo ${{ matrix.target }} | cut -d "_" -f2)
+          TMP_BUILD_PATH=sdk-addon/tmp_build
+          BUILD_CMD="echo deb [trusted=yes] http://ppa.launchpad.net/nugulinux/sdk/ubuntu $DIST main \
+                    | tee /etc/apt/sources.list.d/nugu-unstable.list; \
+                    echo deb [trusted=yes] https://nugulinux.github.io/sdk-unstable/ubuntu/ $DIST main \
+                    | tee /etc/apt/sources.list.d/nugu-unstable.list; \
+                    apt update; \
+                    apt install -y libnugu-dev; \
+                    mkdir -p $TMP_BUILD_PATH & cd $TMP_BUILD_PATH; \
+                    cmake ../; make -j4;"
+
+          echo $BUILD_CMD
+
+          docker run -t --rm --privileged \
+            -v $PWD:$PWD -w $PWD/sdk-addon \
+            -v /var/lib/schroot/chroots \
+            $IMAGE bash -c "$BUILD_CMD"
+
+          rm -rf $TMP_BUILD_PATH
