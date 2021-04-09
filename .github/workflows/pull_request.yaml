@@ -20,6 +20,8 @@ jobs:
       - name: Run clang-tidy review
         uses: kimhyungrok/clang-tidy-action@v1.1
         with:
+            exclude: 'app/stackmenu'
+        with:
           pre-command:
             "echo deb [trusted=yes] https://nugulinux.github.io/sdk-unstable/ubuntu/ bionic main \
             | tee /etc/apt/sources.list.d/nugu-unstable.list; \
