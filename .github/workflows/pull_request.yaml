@@ -1,0 +1,27 @@
+name: Pull Request
+on: pull_request
+
+jobs:
+  checkpatch_review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v1
+      - name: Run checkpatch review
+        uses: webispy/checkpatch-action@master
+
+  clang_tidy_review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Run clang-tidy review
+        uses: kimhyungrok/clang-tidy-action@v1.1
+        with:
+          pre-command:
+            "echo deb [trusted=yes] https://nugulinux.github.io/sdk-unstable/ubuntu/ bionic main \
+            | tee /etc/apt/sources.list.d/nugu-unstable.list; \
+            apt update; \
+            apt install -y libnugu-dev"
