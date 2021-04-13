@@ -80,6 +80,9 @@ void DeviceFeatureAgent::updateInfoForContext(Json::Value& ctx)
     Json::Value root;
     Json::Reader reader;
 
+    if (device_feature_listener)
+        device_feature_listener->requestUpdateInformation();
+
     if (!reader.parse(context_info, root)) {
         nugu_error("parsing error");
         return;
