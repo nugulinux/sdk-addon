@@ -26,9 +26,11 @@ using namespace NuguClientKit;
 class IBatteryListener : public ICapabilityListener {
 public:
     virtual ~IBatteryListener() = default;
+
+    virtual void requestUpdateInformation() = 0;
 };
 
-class BatteryAgent : public Capability {
+class BatteryAgent final : public Capability {
 public:
     BatteryAgent();
     virtual ~BatteryAgent() = default;
@@ -38,14 +40,12 @@ public:
 
     void setBatteryLevel(int level);
     void setCharging(bool charging);
-    void setBatteryApproximateLevel(int level);
-
+    void setBatteryApproximateLevel(bool approximate);
 
 private:
     int battery_level = -1;
     bool battery_charging = false;
-    int battery_approximate_level = -1;
-    SuspendPolicy suspend_policy = SuspendPolicy::STOP;
+    int battery_approximate_level = false;
 
     IBatteryListener* battery_listener = nullptr;
 };

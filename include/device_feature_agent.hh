@@ -25,6 +25,7 @@ class IDeviceFeatureListener : public ICapabilityListener {
 public:
     virtual ~IDeviceFeatureListener() = default;
 
+    virtual void requestUpdateInformation() = 0;
     virtual void requestToGet(const std::string& data) = 0;
     virtual void requestToSet(const std::string& data) = 0;
     virtual void requestToUnSet(const std::string& data) = 0;
