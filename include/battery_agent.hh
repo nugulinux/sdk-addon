@@ -45,7 +45,7 @@ public:
 private:
     int battery_level = -1;
     bool battery_charging = false;
-    int battery_approximate_level = false;
+    bool battery_approximate_level = false;
 
     IBatteryListener* battery_listener = nullptr;
 };
