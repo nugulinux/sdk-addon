@@ -74,14 +74,14 @@ void DeviceFeatureAgent::parsingDirective(const char* dname, const char* message
 
 void DeviceFeatureAgent::updateInfoForContext(Json::Value& ctx)
 {
-    if (!context_info.size())
-        return;
-
     Json::Value root;
     Json::Reader reader;
 
     if (device_feature_listener)
         device_feature_listener->requestUpdateInformation();
+
+    if (!context_info.size())
+        return;
 
     if (!reader.parse(context_info, root)) {
         nugu_error("parsing error");
