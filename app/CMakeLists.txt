@@ -3,6 +3,7 @@ ADD_EXECUTABLE(cli
     mnu_settings.c
     mnu_builtin.cc
     mnu_addon.cc
+    mnu_alarm.cc
     sdk_control.cc
     stackmenu/src/stackmenu.c
     $<TARGET_OBJECTS:objaddon>
