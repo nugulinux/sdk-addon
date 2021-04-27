@@ -10,6 +10,7 @@
 #include "mnu_settings.h"
 #include "mnu_builtin.hh"
 #include "mnu_addon.hh"
+#include "mnu_alarm.hh"
 #include "sdk_control.h"
 
 static int run_status(Stackmenu *mm, StackmenuItem *menu, void *user_data)
@@ -90,6 +91,8 @@ static StackmenuItem menu_main[] = {
 	{ "-" },
 	{ "b", "Control built-in capability agents", NULL },
 	{ "a", "Control add-on capability agents", NULL },
+	{ "-" },
+	{ "c", "Alerts agents test", NULL },
 	NULL
 };
 
@@ -112,6 +115,10 @@ int main(int argc, char *argv[])
 	item = stackmenu_item_find(menu_main, "a");
 	if (item)
 		item->sub_menu = addon_get_stackmenu();
+
+	item = stackmenu_item_find(menu_main, "c");
+	if (item)
+		item->sub_menu = alarm_get_stackmenu();
 
 	loop = g_main_loop_new(NULL, FALSE);
 	mm = stackmenu_new(menu_main, loop);
