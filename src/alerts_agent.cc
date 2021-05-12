@@ -328,6 +328,9 @@ void AlertsAgent::parsingSetAlert(const char* message)
 
     nugu_info("parsingSetAlert");
 
+    if (current && current->token == token)
+        stopSound("ringing-SetAlert");
+
     AlertItem* alert = manager->generateAlert(root);
     if (!alert) {
         nugu_error("internal error");
@@ -401,6 +404,9 @@ void AlertsAgent::parsingDeleteAlerts(const char* message)
         std::string token = tokens[i].asString();
 
         nugu_info("remove %d/%d: %s", i + 1, tokens.size(), token.c_str());
+
+        if (current && current->token == token)
+            stopSound("ringing-DeleteAlert");
 
         if (removeAlert(token) == true)
             list_success.push_back(token);
