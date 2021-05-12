@@ -20,6 +20,7 @@
 #include "alerts_agent.hh"
 
 #include <glib.h>
+#include <time.h>
 
 #define DEFAULT_ALARM_DURATION_SEC 180
 
@@ -56,6 +57,8 @@ struct _AlertItem {
     std::string token;
     bool is_activated;
     bool is_repeat;
+    bool is_ignored;
+    struct timespec creation_time;
     std::string json_str; /* original json data */
     Json::Value json;
     std::string scheduled_time;
@@ -74,6 +77,7 @@ struct _AlertItem {
     bool ignored; /* ignored by another alert item */
 
     time_t timeout_secs; /* Calculated timestamp to fire */
+    time_t secs; /* now + (timeout_secs or snooze_secs) */
 
     guint timer_src; /* GSource id */
     guint asset_timer_src; /* GSource id */

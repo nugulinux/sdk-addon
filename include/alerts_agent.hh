@@ -107,7 +107,7 @@ private:
     void sendEventSetSnoozeFailed(const std::string& ps_id, const std::string& token);
     void sendEventAlertStarted(const std::string& ps_id, const std::string& token);
     void sendEventAlertFailed(const std::string& ps_id, const std::string& token, const std::string& error);
-    void sendEventAlertIgnored(const std::string& ps_id, const std::string& scheduledTime, Json::Value& alerts);
+    void sendEventAlertIgnored(const std::string& ps_id, const std::vector<std::string>& token_list);
     void sendEventAlertStopped(const std::string& ps_id, const std::string& token);
     void sendEventAlertEnteredForeground(const std::string& ps_id, const std::string& token);
     void sendEventAlertEnteredBackground(const std::string& ps_id, const std::string& token);
