@@ -246,17 +246,16 @@ void AlertsAgent::sendEventAlertFailed(const std::string& ps_id, const std::stri
     sendEventCommon("AlertFailed", ps_id, token, error);
 }
 
-void AlertsAgent::sendEventAlertIgnored(const std::string& ps_id, const std::string& scheduledTime, Json::Value& alerts)
+void AlertsAgent::sendEventAlertIgnored(const std::string& ps_id, const std::vector<std::string>& token_list)
 {
-    std::string payload = "";
     Json::Value root;
     Json::FastWriter writer;
 
     root["playServiceId"] = ps_id;
-    root["alerts"] = alerts;
-    payload = writer.write(root);
+    for (const auto& token : token_list)
+        root["tokens"].append(token);
 
-    sendEvent("AlertIgnored", getContextInfo(), payload);
+    sendEvent("AlertIgnored", getContextInfo(), writer.write(root));
 }
 
 void AlertsAgent::sendEventAlertStopped(const std::string& ps_id, const std::string& token)
@@ -601,6 +600,13 @@ void AlertsAgent::onTimeout(const std::string& token)
     AlertItem* item = manager->findItem(token);
     if (!item) {
         nugu_error("can't find the item");
+        return;
+    }
+
+    if (item->is_ignored) {
+        nugu_info("ignore the alert %s", item->token.c_str());
+        sendEventAlertIgnored(item->ps_id, { item->token });
+        manager->deactivate(item);
         return;
     }
 

@@ -323,6 +323,7 @@ AlertItem* AlertsManager::generateAlert(const Json::Value& json_item)
     item->json = json_item;
     item->wday_bitset = DAY_NONE;
     item->wday_count = 1;
+    item->is_ignored = false;
     item->token = json_item["token"].asString();
     item->scheduled_time = json_item["scheduledTime"].asString();
     item->is_activated = json_item["activation"].asBool();
@@ -330,6 +331,7 @@ AlertItem* AlertsManager::generateAlert(const Json::Value& json_item)
     item->ps_id = json_item["playServiceId"].asString();
     item->rsrc_type = json_item["alarmResourceType"].asString();
     item->type_str = json_item["alertType"].asString();
+    clock_gettime(CLOCK_REALTIME, &item->creation_time);
 
     if (item->type_str == "ALARM")
         item->type = ALERT_TYPE_ALARM;
@@ -410,6 +412,14 @@ AlertItem* AlertsManager::generateAlert(const Json::Value& json_item)
     return item;
 }
 
+static bool _compare_creation_time_func(AlertItem* a, AlertItem* b)
+{
+    if (a->creation_time.tv_sec != b->creation_time.tv_sec)
+        return a->creation_time.tv_sec < b->creation_time.tv_sec;
+
+    return a->creation_time.tv_nsec < b->creation_time.tv_nsec;
+}
+
 void AlertsManager::scheduling(time_t base_timestamp)
 {
     struct tm now_tm;
@@ -422,12 +432,23 @@ void AlertsManager::scheduling(time_t base_timestamp)
     nugu_info("Scheduling! base %zd", base_timestamp);
     dump_time_t("- NOW ", base_timestamp);
 
-    for (auto const& iter : token_map) {
-        AlertItem* item = iter.second;
+    std::vector<AlertItem*> sorted_list;
+    for (auto const& iter : token_map)
+        sorted_list.push_back(iter.second);
+
+    /* sort alert item by creation order */
+    std::sort(sorted_list.begin(), sorted_list.end(), _compare_creation_time_func);
+
+    AlertItem* prev_item = nullptr;
+
+    for (auto const& iter : sorted_list) {
+        AlertItem* item = iter;
         time_t secs;
 
         nugu_dbg("token: %s", item->token.c_str());
         nugu_dbg("- activated: %d", item->is_activated);
+
+        item->ignored = false;
 
         if (item->is_activated == false)
             continue;
@@ -438,6 +459,7 @@ void AlertsManager::scheduling(time_t base_timestamp)
         } else {
             if (item->timeout_secs != 0) {
                 nugu_dbg("- already calculated %d secs", item->timeout_secs);
+                prev_item = item;
                 continue;
             }
 
@@ -464,6 +486,17 @@ void AlertsManager::scheduling(time_t base_timestamp)
         }
 
         item->timer_src = addTimeout(secs, item->token);
+
+        item->secs = base_timestamp + secs;
+
+        if (prev_item) {
+            if (item->secs == prev_item->secs) {
+                nugu_info("- set ignored flag to %s", prev_item->token.c_str());
+                prev_item->is_ignored = true;
+            }
+        }
+
+        prev_item = item;
     }
 }
 
@@ -499,6 +532,10 @@ bool AlertsManager::processDuplication(const AlertItem* target)
 
         /* No duplicate days of the week */
         if ((existing->wday_bitset & target->wday_bitset) == 0)
+            continue;
+
+        /* Allow duplicated time alert for different type */
+        if (target->type != existing->type)
             continue;
 
         if (existing->is_repeat) {
