@@ -46,6 +46,7 @@ static const char* CAPABILITY_VERSION = "1.1";
 
 AlertsAgent::AlertsAgent()
     : Capability(CAPABILITY_NAME, CAPABILITY_VERSION)
+    , audioplayer(nullptr)
     , playstackctl_ps_id("")
     , manager(new AlertsManager())
     , current(nullptr)
@@ -401,13 +402,13 @@ void AlertsAgent::parsingDeleteAlerts(const char* message)
 
         nugu_info("remove %d/%d: %s", i + 1, tokens.size(), token.c_str());
 
-        if (alerts_listener)
-            alerts_listener->onAlertDelete(token);
-
         if (removeAlert(token) == true)
             list_success.push_back(token);
         else
             list_failed.push_back(token);
+
+        if (alerts_listener)
+            alerts_listener->onAlertDelete(token);
     }
 
     manager->dump();
@@ -707,7 +708,7 @@ void AlertsAgent::unHoldAlarm()
 void AlertsAgent::holdAlarmUntilTextProcess()
 {
     nugu_info("holdAlarmUntilTextProcess execute");
-    holdAlarmByText = true;
+    hold_alarm_by_text = true;
 
     focus_manager->holdFocus(ALERTS_FOCUS_TYPE);
 }
@@ -726,10 +727,10 @@ void AlertsAgent::unholdAlarmUntilTextProcess()
 {
     nugu_info("unholdAlarmUntilTextProcess execute");
 
-    if (holdAlarmByText && alerts_listener)
+    if (hold_alarm_by_text && alerts_listener)
         g_idle_add(_emit_in_idle, this);
 
-    holdAlarmByText = false;
+    hold_alarm_by_text = false;
 }
 
 void AlertsAgent::playSound()
@@ -758,19 +759,16 @@ void AlertsAgent::playSound()
         if (alerts_listener)
             alerts_listener->onFilePlayRequest(current->token, current->type_str, current->rsrc_type);
     } else if (current->type == ALERT_TYPE_ALARM) {
-        bool use_file = false;
+        bool use_file = true;
 
         if (current->rsrc_type == "MUSIC") {
-            if (audioplayer->playMedia() == false)
-                use_file = true;
+            if (audioplayer->playMedia())
+                use_file = false;
         } else if (current->rsrc_type == "TTS") {
-            if (audioplayer->playTTS() == false)
-                use_file = true;
-        } else if (current->rsrc_type == "INTERNAL") {
-            use_file = true;
-        } else {
+            if (audioplayer->playTTS())
+                use_file = false;
+        } else if (current->rsrc_type != "INTERNAL") {
             nugu_error("unknown resource type: %s", current->rsrc_type.c_str());
-            use_file = true;
         }
 
         if (use_file && alerts_listener)
