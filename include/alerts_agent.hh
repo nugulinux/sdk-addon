@@ -139,7 +139,7 @@ private:
 
     IAlertsListener* alerts_listener = nullptr;
 
-    bool holdAlarmByText;
+    bool hold_alarm_by_text;
     bool is_enable;
 
     AlertsManager* manager;
