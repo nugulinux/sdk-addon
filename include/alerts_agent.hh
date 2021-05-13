@@ -95,6 +95,7 @@ public:
 private:
     void releaseFocus();
     void playSound();
+    void complete(AlertItem *item);
 
     /* Events */
     void sendEventCommon(const std::string& ename, const std::string& ps_id, const std::string& token, const std::string& error = "");

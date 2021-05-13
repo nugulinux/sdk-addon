@@ -598,21 +598,22 @@ void AlertsAgent::onTimeout(const std::string& token)
 {
     nugu_info("timeout! %s", token.c_str());
 
-    if (is_enable == false) {
-        nugu_info("AlertsAgent is disabled");
-        return;
-    }
-
     AlertItem* item = manager->findItem(token);
     if (!item) {
         nugu_error("can't find the item");
         return;
     }
 
+    if (is_enable == false) {
+        nugu_info("AlertsAgent is disabled");
+        complete(item);
+        return;
+    }
+
     if (item->is_ignored) {
         nugu_info("ignore the alert %s", item->token.c_str());
         sendEventAlertIgnored(item->ps_id, { item->token });
-        manager->deactivate(item);
+        complete(item);
         return;
     }
 
@@ -820,10 +821,15 @@ void AlertsAgent::stopSound(const std::string& reason, bool isWakeup)
         playsync_manager->releaseSync(playstackctl_ps_id, getName());
     }
 
-    manager->done(item);
-
     if (item->type != ALERT_TYPE_SLEEP && reason != "another_alert")
         releaseFocus();
+
+    complete(item);
+}
+
+void AlertsAgent::complete(AlertItem *item)
+{
+    manager->done(item);
 
     if (item->type == ALERT_TYPE_ALARM) {
         if (item->is_repeat == false) {
