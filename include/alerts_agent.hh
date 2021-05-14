@@ -82,7 +82,7 @@ public:
     int getAlertCount();
     void resetAlerts();
 
-    void stopSound(const std::string& reason, bool isWakeup = false);
+    void stopSound(const std::string& reason, bool keep_playstack = false);
     bool isAlertPlaying();
 
     void setEnable(bool flag);

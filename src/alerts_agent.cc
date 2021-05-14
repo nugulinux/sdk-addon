@@ -794,7 +794,7 @@ void AlertsAgent::playSound()
     }
 }
 
-void AlertsAgent::stopSound(const std::string& reason, bool isWakeup)
+void AlertsAgent::stopSound(const std::string& reason, bool keep_playstack)
 {
     nugu_info("reason: %s", reason.c_str());
 
@@ -812,8 +812,8 @@ void AlertsAgent::stopSound(const std::string& reason, bool isWakeup)
         alerts_listener->onAlertStop(item->token, item->type_str);
 
     if (!playstackctl_ps_id.empty()) {
-        //check whether the alarm is stopped by asr or pressing button
-        if (isWakeup) {
+        if (keep_playstack) {
+            nugu_info("postPoneRelease");
             playsync_manager->postPoneRelease();
         }
 
