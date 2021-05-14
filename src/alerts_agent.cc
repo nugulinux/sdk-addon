@@ -718,40 +718,6 @@ bool AlertsAgent::isEnable()
     return is_enable;
 }
 
-void AlertsAgent::unHoldAlarm()
-{
-    nugu_info("unHoldAlarm execute");
-    focus_manager->unholdFocus(ALERTS_FOCUS_TYPE);
-}
-
-void AlertsAgent::holdAlarmUntilTextProcess()
-{
-    nugu_info("holdAlarmUntilTextProcess execute");
-    hold_alarm_by_text = true;
-
-    focus_manager->holdFocus(ALERTS_FOCUS_TYPE);
-}
-
-static gboolean _emit_in_idle(gpointer userdata)
-{
-    AlertsAgent* agent = static_cast<AlertsAgent*>(userdata);
-
-    if (agent)
-        agent->unHoldAlarm();
-
-    return FALSE;
-}
-
-void AlertsAgent::unholdAlarmUntilTextProcess()
-{
-    nugu_info("unholdAlarmUntilTextProcess execute");
-
-    if (hold_alarm_by_text && alerts_listener)
-        g_idle_add(_emit_in_idle, this);
-
-    hold_alarm_by_text = false;
-}
-
 void AlertsAgent::playSound()
 {
     if (current == nullptr) {
