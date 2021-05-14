@@ -177,7 +177,7 @@ void AlertsAgent::updateInfoForContext(Json::Value& ctx)
     alerts["supportedAlarmResourceTypes"][2] = "TTS";
     alerts["internalAlarms"][0]["BASIC"] = "기본 알람음";
 
-    Json::Value allAlerts = getAlertList();
+    Json::Value allAlerts = manager->getAlertList(true);
     if (allAlerts.empty()) {
         alerts["allAlerts"] = Json::Value(Json::arrayValue);
     } else {
@@ -604,6 +604,12 @@ void AlertsAgent::onTimeout(const std::string& token)
         return;
     }
 
+    /* deactivate the current alarm */
+    if (item->is_repeat == false) {
+        nugu_dbg("no repeat alert. deactivated");
+        manager->deactivate(item);
+    }
+
     if (is_enable == false) {
         nugu_info("AlertsAgent is disabled");
         complete(item);
@@ -827,18 +833,12 @@ void AlertsAgent::stopSound(const std::string& reason, bool keep_playstack)
     complete(item);
 }
 
-void AlertsAgent::complete(AlertItem *item)
+void AlertsAgent::complete(AlertItem* item)
 {
     manager->done(item);
 
-    if (item->type == ALERT_TYPE_ALARM) {
-        if (item->is_repeat == false) {
-            nugu_dbg("no repeat alert. deactivated");
-            manager->deactivate(item);
-        }
-    } else {
+    if (item->type != ALERT_TYPE_ALARM)
         removeAlert(item->token);
-    }
 
     manager->scheduling();
     manager->dump();
