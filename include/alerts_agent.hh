@@ -88,10 +88,6 @@ public:
     void setEnable(bool flag);
     bool isEnable();
 
-    void unHoldAlarm();
-    void holdAlarmUntilTextProcess();
-    void unholdAlarmUntilTextProcess();
-
 private:
     void releaseFocus();
     void playSound();
@@ -140,7 +136,6 @@ private:
 
     IAlertsListener* alerts_listener = nullptr;
 
-    bool hold_alarm_by_text;
     bool is_enable;
 
     AlertsManager* manager;
