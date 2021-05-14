@@ -761,7 +761,7 @@ size_t AlertsManager::getAlertCount()
     return token_map.size();
 }
 
-Json::Value AlertsManager::getAlertList()
+Json::Value AlertsManager::getAlertList(bool is_context)
 {
     Json::Value result;
     Json::FastWriter writer;
@@ -770,6 +770,13 @@ Json::Value AlertsManager::getAlertList()
         int index = 0;
         for (auto const& iter : token_map) {
             AlertItem* item = iter.second;
+
+            if (is_context) {
+                /* Skip the deactivated TIMER/SLEEP item to context list */
+                if (item->type != ALERT_TYPE_ALARM
+                    && item->is_activated == false)
+                    continue;
+            }
 
             result[index] = item->json;
             index++;

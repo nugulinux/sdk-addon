@@ -116,7 +116,7 @@ public:
     void dump();
 
     size_t getAlertCount();
-    Json::Value getAlertList();
+    Json::Value getAlertList(bool is_context = false);
 
 private:
     static gboolean quit_fd_callback(GIOChannel* channel, GIOCondition cond, gpointer userdata);
