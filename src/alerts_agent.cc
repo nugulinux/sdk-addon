@@ -39,6 +39,11 @@
  */
 #define MAX_ALERTS (MAX_ALARM + 2)
 
+/**
+ * Snooze is still possible for 30 seconds after the alarm ends.
+ */
+#define SNOOZE_AVAILABILITY_SECS 30
+
 using namespace NuguCapability;
 
 static const char* CAPABILITY_NAME = "Alerts";
@@ -50,6 +55,8 @@ AlertsAgent::AlertsAgent()
     , playstackctl_ps_id("")
     , manager(new AlertsManager())
     , current(nullptr)
+    , active_alarm_token("")
+    , snooze_availability_timer(0)
 {
     directive_for_sync = nugu_directive_new("Alerts", "SetAlert",
         CAPABILITY_VERSION, "", "", "", "{}",
@@ -99,6 +106,11 @@ void AlertsAgent::deInitialize()
     if (current)
         stopSound("deInitialize");
 
+    if (snooze_availability_timer) {
+        g_source_remove(snooze_availability_timer);
+        snooze_availability_timer = 0;
+    }
+
     if (audioplayer) {
         audioplayer->removeListener(this);
         audioplayer->deInitialize();
@@ -106,6 +118,7 @@ void AlertsAgent::deInitialize()
         audioplayer = nullptr;
     }
 
+    active_alarm_token = "";
     initialized = false;
     is_enable = false;
 }
@@ -184,10 +197,8 @@ void AlertsAgent::updateInfoForContext(Json::Value& ctx)
         alerts["allAlerts"] = allAlerts;
     }
 
-    if (current != nullptr) {
-        if (current->type == ALERT_TYPE_ALARM)
-            alerts["activeAlarmToken"] = current->token;
-    }
+    if (active_alarm_token != "")
+        alerts["activeAlarmToken"] = active_alarm_token;
 
     ctx[getName()] = alerts;
 }
@@ -407,6 +418,14 @@ void AlertsAgent::parsingDeleteAlerts(const char* message)
         if (current && current->token == token)
             stopSound("ringing-DeleteAlert");
 
+        if (active_alarm_token == token) {
+            active_alarm_token = "";
+            if (snooze_availability_timer) {
+                g_source_remove(snooze_availability_timer);
+                snooze_availability_timer = 0;
+            }
+        }
+
         if (removeAlert(token) == true)
             list_success.push_back(token);
         else
@@ -517,6 +536,11 @@ void AlertsAgent::parsingSetSnooze(const char* message)
         return;
     }
 
+    if (snooze_availability_timer) {
+        g_source_remove(snooze_availability_timer);
+        snooze_availability_timer = 0;
+    }
+
     manager->activate(item);
     item->snooze_secs = duration_sec;
 
@@ -619,22 +643,35 @@ void AlertsAgent::onTimeout(const std::string& token)
     if (item->is_ignored) {
         nugu_info("ignore the alert %s", item->token.c_str());
         sendEventAlertIgnored(item->ps_id, { item->token });
-        complete(item);
+        complete(item, false);
         return;
     }
+
+    if (snooze_availability_timer) {
+        g_source_remove(snooze_availability_timer);
+        snooze_availability_timer = 0;
+    }
+
+    active_alarm_token = "";
 
     if (current == nullptr) {
         current = item;
 
-        if (focus_manager) {
-            nugu_info("requestFocus");
-            focus_manager->requestFocus(ALERTS_FOCUS_TYPE, CAPABILITY_NAME, this);
-        }
+        if (item->type == ALERT_TYPE_ALARM)
+            active_alarm_token = item->token;
+
+        nugu_info("requestFocus");
+        focus_manager->requestFocus(ALERTS_FOCUS_TYPE, CAPABILITY_NAME, this);
     } else {
         /* Keep current focus */
-        stopSound("another_alert");
+        if (current)
+            stopSound("another_alert");
 
         current = item;
+
+        if (item->type == ALERT_TYPE_ALARM)
+            active_alarm_token = item->token;
+
         playSound();
     }
 }
@@ -799,12 +836,37 @@ void AlertsAgent::stopSound(const std::string& reason, bool keep_playstack)
     complete(item);
 }
 
-void AlertsAgent::complete(AlertItem* item)
+gboolean AlertsAgent::onSnoozeAvailabilityTimeout(gpointer userdata)
+{
+    AlertsAgent* agent = (AlertsAgent*)userdata;
+
+    nugu_info("from now on, snooze for previous alarm is not available.");
+
+    agent->active_alarm_token = "";
+    agent->snooze_availability_timer = 0;
+
+    return FALSE;
+}
+
+void AlertsAgent::complete(AlertItem* item, bool start_snooze_timer)
 {
     manager->done(item);
 
-    if (item->type != ALERT_TYPE_ALARM)
+    if (snooze_availability_timer) {
+        g_source_remove(snooze_availability_timer);
+        snooze_availability_timer = 0;
+    }
+
+    if (item->type != ALERT_TYPE_ALARM) {
+        active_alarm_token = "";
         removeAlert(item->token);
+    } else if (start_snooze_timer && active_alarm_token != "") {
+        /* Snooze only supports ALARM alerts and is possible only for
+         * SNOOZE_AVAILABILITY_SECS seconds after the alarm ends */
+        snooze_availability_timer = g_timeout_add_seconds(SNOOZE_AVAILABILITY_SECS,
+            onSnoozeAvailabilityTimeout, this);
+        nugu_info("start snooze availability timer (%d secs)", SNOOZE_AVAILABILITY_SECS);
+    }
 
     manager->scheduling();
     manager->dump();

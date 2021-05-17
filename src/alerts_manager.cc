@@ -454,11 +454,19 @@ void AlertsManager::scheduling(time_t base_timestamp)
             continue;
 
         if (item->snooze_secs) {
+            if (item->timer_src != 0) {
+                nugu_dbg("- already calculated %d snooze secs (src=%d)",
+                    item->snooze_secs, item->timer_src);
+                prev_item = item;
+                continue;
+            }
+
             secs = item->snooze_secs;
             nugu_dbg("- use snooze %d secs", secs);
         } else {
             if (item->timeout_secs != 0) {
-                nugu_dbg("- already calculated %d secs", item->timeout_secs);
+                nugu_dbg("- already calculated %d secs (src=%d)",
+                    item->timeout_secs, item->timer_src);
                 prev_item = item;
                 continue;
             }

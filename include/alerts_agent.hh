@@ -91,7 +91,7 @@ public:
 private:
     void releaseFocus();
     void playSound();
-    void complete(AlertItem *item);
+    void complete(AlertItem *item, bool start_snooze_timer = true);
 
     /* Events */
     void sendEventCommon(const std::string& ename, const std::string& ps_id, const std::string& token, const std::string& error = "");
@@ -129,6 +129,8 @@ private:
     void onAssetRequireTimeout(const std::string& token) override;
     void onDurationTimeout(const std::string& token) override;
 
+    static gboolean onSnoozeAvailabilityTimeout(gpointer userdata);
+
     NuguCapability::AlertsAudioPlayer* audioplayer;
     std::string playstackctl_ps_id;
     FocusState focus_state;
@@ -140,6 +142,8 @@ private:
 
     AlertsManager* manager;
     AlertItem* current;
+    std::string active_alarm_token;
+    guint snooze_availability_timer;
 };
 
 #endif /* __NUGU_ALERTS_AGENT_H__ */
