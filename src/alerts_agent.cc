@@ -51,7 +51,6 @@ static const char* CAPABILITY_VERSION = "1.1";
 
 AlertsAgent::AlertsAgent()
     : Capability(CAPABILITY_NAME, CAPABILITY_VERSION)
-    , audioplayer(nullptr)
     , manager(new AlertsManager())
 {
     directive_for_sync = nugu_directive_new("Alerts", "SetAlert",
@@ -85,11 +84,6 @@ void AlertsAgent::initialize()
     addReferrerEvents("SetAlertAssetSucceeded", "DeliveryAlertAsset");
     addReferrerEvents("SetAlertAssetFailed", "DeliveryAlertAsset");
 
-    audioplayer = new AlertsAudioPlayer();
-    audioplayer->setNuguCoreContainer(core_container);
-    audioplayer->initialize();
-    audioplayer->addListener(this);
-
     playsync_manager->registerCapabilityForSync(CAPABILITY_NAME);
 
     active_alarm_token = "";
@@ -100,6 +94,7 @@ void AlertsAgent::initialize()
     snooze_availability_timer = 0;
 
     cur.token = "";
+    cur.audioplayer = nullptr;
 }
 
 void AlertsAgent::deInitialize()
@@ -110,13 +105,6 @@ void AlertsAgent::deInitialize()
     if (snooze_availability_timer) {
         g_source_remove(snooze_availability_timer);
         snooze_availability_timer = 0;
-    }
-
-    if (audioplayer) {
-        audioplayer->removeListener(this);
-        audioplayer->deInitialize();
-        delete audioplayer;
-        audioplayer = nullptr;
     }
 
     active_alarm_token = "";
@@ -151,12 +139,18 @@ void AlertsAgent::onFocusChanged(FocusState state)
     case FocusState::BACKGROUND:
         stopSound("focus-background");
         break;
-    case FocusState::NONE: {
-        IMediaPlayer* player = audioplayer->getPlayer();
-        if (player != nullptr) {
-            player->stop();
+    case FocusState::NONE:
+        if (cur.audioplayer) {
+            nugu_info("remove audioplayer");
+            IMediaPlayer* player = cur.audioplayer->getPlayer();
+            if (player != nullptr)
+                player->stop();
+
+            cur.audioplayer->deInitialize();
+            delete cur.audioplayer;
+            cur.audioplayer = nullptr;
         }
-    } break;
+        break;
     }
 
     focus_state = state;
@@ -468,6 +462,12 @@ void AlertsAgent::parsingDeliveryAlertAsset(const char* message)
 
     nugu_info("parsingDeliveryAlertAsset");
 
+    AlertItem *item = manager->findItem(token);
+    if (!item) {
+        nugu_error("can't find the item");
+        return;
+    }
+
     asset_detail = root["assetDetails"];
 
     for (int i = 0; i < (int)asset_detail.size(); i++) {
@@ -482,14 +482,22 @@ void AlertsAgent::parsingDeliveryAlertAsset(const char* message)
         }
 
         type = header["namespace"].asString() + "." + header["name"].asString();
-        nugu_dbg("%s", type.c_str());
+        nugu_dbg("asset namespace: %s", type.c_str());
+
+        if (item->audioplayer == nullptr) {
+            nugu_dbg("create audioplayer for %s", token.c_str());
+            item->audioplayer = new AlertsAudioPlayer();
+            item->audioplayer->setNuguCoreContainer(core_container);
+            item->audioplayer->initialize();
+            item->audioplayer->addListener(this);
+        }
 
         if (type == "TTS.Attachment") {
             destroy_directive_by_agent = true;
-            audioplayer->setNuguDirective(getNuguDirective());
+            item->audioplayer->setNuguDirective(getNuguDirective());
         } else if (type == "AudioPlayer.Play") {
-            audioplayer->setNuguDirective(getNuguDirective());
-            audioplayer->parsingDirective(header["name"].asCString(), writer.write(payload).c_str());
+            item->audioplayer->setNuguDirective(getNuguDirective());
+            item->audioplayer->parsingDirective(header["name"].asCString(), writer.write(payload).c_str());
         } else {
             nugu_warn("%s is not support", type.c_str());
             continue;
@@ -566,7 +574,7 @@ void AlertsAgent::mediaStateChanged(NuguCapability::AudioPlayerState state, cons
         return;
     }
 
-    if (audioplayer->isTTSPlayer()) {
+    if (cur.audioplayer && cur.audioplayer->isTTSPlayer()) {
         nugu_info("TTS play finished. play default alarm sound");
 
         if (item->duration_timer_src != 0)
@@ -677,6 +685,17 @@ void AlertsAgent::onTimeout(const std::string& token)
     } else {
         /* Keep current focus */
         stopSound("another_alert");
+
+        if (cur.audioplayer) {
+            nugu_info("remove audioplayer");
+            IMediaPlayer* player = cur.audioplayer->getPlayer();
+            if (player != nullptr)
+                player->stop();
+
+            cur.audioplayer->deInitialize();
+            delete cur.audioplayer;
+            cur.audioplayer = nullptr;
+        }
 
         cur.token = item->token;
 
@@ -804,11 +823,21 @@ void AlertsAgent::playSound()
         bool use_file = true;
 
         if (item->rsrc_type == "MUSIC") {
-            if (audioplayer->playMedia())
+            if (item->audioplayer && item->audioplayer->playMedia()) {
                 use_file = false;
+                cur.audioplayer = item->audioplayer;
+                item->audioplayer = nullptr;
+            } else {
+                nugu_error("playMedia() failed");
+            }
         } else if (item->rsrc_type == "TTS") {
-            if (audioplayer->playTTS())
+            if (item->audioplayer && item->audioplayer->playTTS()) {
                 use_file = false;
+                cur.audioplayer = item->audioplayer;
+                item->audioplayer = nullptr;
+            } else {
+                nugu_error("playTTS() failed");
+            }
         } else if (item->rsrc_type != "INTERNAL") {
             nugu_error("unknown resource type: %s", item->rsrc_type.c_str());
         }
@@ -826,7 +855,7 @@ void AlertsAgent::playSound()
 
 void AlertsAgent::stopSound(const std::string& reason, bool keep_playstack)
 {
-    nugu_info("reason: %s", reason.c_str());
+    nugu_info("stopSound reason: %s", reason.c_str());
 
     if (cur.token == "") {
         nugu_dbg("already stopped");

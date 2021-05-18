@@ -82,6 +82,8 @@ struct _AlertItem {
     guint timer_src; /* GSource id */
     guint asset_timer_src; /* GSource id */
     guint duration_timer_src; /* GSource id */
+
+    NuguCapability::AlertsAudioPlayer* audioplayer;
 };
 
 class AlertsManager {

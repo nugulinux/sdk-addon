@@ -331,6 +331,7 @@ AlertItem* AlertsManager::generateAlert(const Json::Value& json_item)
     item->ps_id = json_item["playServiceId"].asString();
     item->rsrc_type = json_item["alarmResourceType"].asString();
     item->type_str = json_item["alertType"].asString();
+    item->audioplayer = nullptr;
     clock_gettime(CLOCK_REALTIME, &item->creation_time);
 
     if (item->type_str == "ALARM")
@@ -676,6 +677,13 @@ bool AlertsManager::removeItem(const std::string& token)
 
     if (item->is_activated)
         deactivate(item);
+
+    if (item->audioplayer) {
+        nugu_dbg("remove pending audioplayer");
+        item->audioplayer->deInitialize();
+        delete item->audioplayer;
+        item->audioplayer = nullptr;
+    }
 
     delete item;
 
