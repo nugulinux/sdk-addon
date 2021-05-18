@@ -141,7 +141,13 @@ private:
     bool is_enable;
 
     AlertsManager* manager;
-    AlertItem* current;
+
+    struct {
+        std::string token;
+        std::string type;
+        std::string ps_id;
+    } cur;
+
     std::string active_alarm_token;
     guint snooze_availability_timer;
 };

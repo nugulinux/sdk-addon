@@ -52,11 +52,7 @@ static const char* CAPABILITY_VERSION = "1.1";
 AlertsAgent::AlertsAgent()
     : Capability(CAPABILITY_NAME, CAPABILITY_VERSION)
     , audioplayer(nullptr)
-    , playstackctl_ps_id("")
     , manager(new AlertsManager())
-    , current(nullptr)
-    , active_alarm_token("")
-    , snooze_availability_timer(0)
 {
     directive_for_sync = nugu_directive_new("Alerts", "SetAlert",
         CAPABILITY_VERSION, "", "", "", "{}",
@@ -96,14 +92,19 @@ void AlertsAgent::initialize()
 
     playsync_manager->registerCapabilityForSync(CAPABILITY_NAME);
 
+    active_alarm_token = "";
     initialized = true;
     is_enable = true;
     focus_state = FocusState::NONE;
+    playstackctl_ps_id = "";
+    snooze_availability_timer = 0;
+
+    cur.token = "";
 }
 
 void AlertsAgent::deInitialize()
 {
-    if (current)
+    if (cur.token != "")
         stopSound("deInitialize");
 
     if (snooze_availability_timer) {
@@ -121,6 +122,8 @@ void AlertsAgent::deInitialize()
     active_alarm_token = "";
     initialized = false;
     is_enable = false;
+
+    cur.token = "";
 }
 
 void AlertsAgent::setCapabilityListener(ICapabilityListener* clistener)
@@ -338,9 +341,6 @@ void AlertsAgent::parsingSetAlert(const char* message)
 
     nugu_info("parsingSetAlert");
 
-    if (current && current->token == token)
-        stopSound("ringing-SetAlert");
-
     AlertItem* alert = manager->generateAlert(root);
     if (!alert) {
         nugu_error("internal error");
@@ -414,9 +414,6 @@ void AlertsAgent::parsingDeleteAlerts(const char* message)
         std::string token = tokens[i].asString();
 
         nugu_info("remove %d/%d: %s", i + 1, tokens.size(), token.c_str());
-
-        if (current && current->token == token)
-            stopSound("ringing-DeleteAlert");
 
         if (active_alarm_token == token) {
             active_alarm_token = "";
@@ -558,21 +555,27 @@ void AlertsAgent::mediaStateChanged(NuguCapability::AudioPlayerState state, cons
     if (state != AudioPlayerState::FINISHED)
         return;
 
-    if (current == nullptr) {
-        nugu_error("current is null");
+    if (cur.token == "") {
+        nugu_error("current is empty");
+        return;
+    }
+
+    AlertItem *item = manager->findItem(cur.token);
+    if (!item) {
+        nugu_error("can't find the alert item");
         return;
     }
 
     if (audioplayer->isTTSPlayer()) {
         nugu_info("TTS play finished. play default alarm sound");
 
-        if (current->duration_timer_src != 0)
-            manager->removeTimeout(current->duration_timer_src);
+        if (item->duration_timer_src != 0)
+            manager->removeTimeout(item->duration_timer_src);
 
-        current->duration_timer_src = manager->addDurationTimeout(current->duration_secs, current->token);
+        item->duration_timer_src = manager->addDurationTimeout(item->duration_secs, item->token);
 
-        if (alerts_listener && current)
-            alerts_listener->onFilePlayRequest(current->token, current->type_str, current->rsrc_type);
+        if (alerts_listener)
+            alerts_listener->onFilePlayRequest(item->token, item->type_str, item->rsrc_type);
     } else {
         nugu_info("finished!! releasefocus");
         releaseFocus();
@@ -601,20 +604,26 @@ void AlertsAgent::mediaEventReport(NuguCapability::AudioPlayerEvent event, const
 
 void AlertsAgent::durationChanged(int duration)
 {
-    if (current == nullptr)
+    if (cur.token == "")
         return;
+
+    AlertItem *item = manager->findItem(cur.token);
+    if (!item) {
+        nugu_error("can't find the alert item");
+        return;
+    }
 
     nugu_dbg("media resource length: %d secs", duration);
 
-    if (duration <= current->duration_secs)
+    if (duration <= item->duration_secs)
         return;
 
     nugu_dbg("media resource length is longer than the alarm duration");
 
-    if (current->duration_timer_src != 0)
-        manager->removeTimeout(current->duration_timer_src);
+    if (item->duration_timer_src != 0)
+        manager->removeTimeout(item->duration_timer_src);
 
-    current->duration_timer_src = manager->addDurationTimeout(duration, current->token);
+    item->duration_timer_src = manager->addDurationTimeout(duration, item->token);
 }
 
 /* callback in thread context */
@@ -636,6 +645,9 @@ void AlertsAgent::onTimeout(const std::string& token)
 
     if (is_enable == false) {
         nugu_info("AlertsAgent is disabled");
+        if (item->type == ALERT_TYPE_ALARM)
+            active_alarm_token = item->token;
+
         complete(item);
         return;
     }
@@ -654,8 +666,8 @@ void AlertsAgent::onTimeout(const std::string& token)
 
     active_alarm_token = "";
 
-    if (current == nullptr) {
-        current = item;
+    if (cur.token == "") {
+        cur.token = item->token;
 
         if (item->type == ALERT_TYPE_ALARM)
             active_alarm_token = item->token;
@@ -664,10 +676,9 @@ void AlertsAgent::onTimeout(const std::string& token)
         focus_manager->requestFocus(ALERTS_FOCUS_TYPE, CAPABILITY_NAME, this);
     } else {
         /* Keep current focus */
-        if (current)
-            stopSound("another_alert");
+        stopSound("another_alert");
 
-        current = item;
+        cur.token = item->token;
 
         if (item->type == ALERT_TYPE_ALARM)
             active_alarm_token = item->token;
@@ -725,7 +736,7 @@ Json::Value AlertsAgent::getAlertList()
 
 bool AlertsAgent::isAlertPlaying()
 {
-    if (current)
+    if (cur.token != "")
         return true;
 
     return false;
@@ -733,10 +744,10 @@ bool AlertsAgent::isAlertPlaying()
 
 void AlertsAgent::resetAlerts()
 {
-    if (current)
+    if (cur.token != "")
         stopSound("resetAlerts");
 
-    current = nullptr;
+    cur.token = "";
     manager->reset();
 }
 
@@ -757,45 +768,54 @@ bool AlertsAgent::isEnable()
 
 void AlertsAgent::playSound()
 {
-    if (current == nullptr) {
+    if (cur.token == "") {
+        nugu_error("current alert is empty");
+        return;
+    }
+
+    AlertItem *item = manager->findItem(cur.token);
+    if (!item) {
         nugu_error("can't find the current alert");
         return;
     }
 
-    nugu_info("playSound type: %s", current->type_str.c_str());
+    cur.type = item->type_str;
+    cur.ps_id = item->ps_id;
 
-    sendEventAlertStarted(current->ps_id, current->token);
+    nugu_info("playSound type: %s", cur.type.c_str());
+
+    sendEventAlertStarted(cur.ps_id, cur.token);
 
     if (alerts_listener)
-        alerts_listener->onAlertStart(current->token, current->type_str, current->rsrc_type);
+        alerts_listener->onAlertStart(item->token, item->type_str, item->rsrc_type);
 
     if (!playstackctl_ps_id.empty()) {
         playsync_manager->prepareSync(playstackctl_ps_id, directive_for_sync);
         playsync_manager->startSync(playstackctl_ps_id, getName());
     }
 
-    if (current->type != ALERT_TYPE_SLEEP)
-        current->duration_timer_src = manager->addDurationTimeout(current->duration_secs, current->token);
+    if (item->type != ALERT_TYPE_SLEEP)
+        item->duration_timer_src = manager->addDurationTimeout(item->duration_secs, item->token);
 
-    if (current->type == ALERT_TYPE_TIMER) {
+    if (item->type == ALERT_TYPE_TIMER) {
         if (alerts_listener)
-            alerts_listener->onFilePlayRequest(current->token, current->type_str, current->rsrc_type);
-    } else if (current->type == ALERT_TYPE_ALARM) {
+            alerts_listener->onFilePlayRequest(item->token, item->type_str, item->rsrc_type);
+    } else if (item->type == ALERT_TYPE_ALARM) {
         bool use_file = true;
 
-        if (current->rsrc_type == "MUSIC") {
+        if (item->rsrc_type == "MUSIC") {
             if (audioplayer->playMedia())
                 use_file = false;
-        } else if (current->rsrc_type == "TTS") {
+        } else if (item->rsrc_type == "TTS") {
             if (audioplayer->playTTS())
                 use_file = false;
-        } else if (current->rsrc_type != "INTERNAL") {
-            nugu_error("unknown resource type: %s", current->rsrc_type.c_str());
+        } else if (item->rsrc_type != "INTERNAL") {
+            nugu_error("unknown resource type: %s", item->rsrc_type.c_str());
         }
 
         if (use_file && alerts_listener)
-            alerts_listener->onFilePlayRequest(current->token, current->type_str, current->rsrc_type);
-    } else if (current->type == ALERT_TYPE_SLEEP) {
+            alerts_listener->onFilePlayRequest(item->token, item->type_str, item->rsrc_type);
+    } else if (item->type == ALERT_TYPE_SLEEP) {
         stopSound("playSound, SLEEP");
         playsync_manager->clear();
         focus_manager->stopAllFocus();
@@ -808,18 +828,21 @@ void AlertsAgent::stopSound(const std::string& reason, bool keep_playstack)
 {
     nugu_info("reason: %s", reason.c_str());
 
-    if (current == nullptr) {
+    if (cur.token == "") {
         nugu_dbg("already stopped");
         return;
     }
 
-    AlertItem* item = current;
-    current = nullptr;
+    AlertItem* item = manager->findItem(cur.token);
+    if (item)
+        complete(item);
 
-    sendEventAlertStopped(item->ps_id, item->token);
+    sendEventAlertStopped(cur.ps_id, cur.token);
 
     if (alerts_listener)
-        alerts_listener->onAlertStop(item->token, item->type_str);
+        alerts_listener->onAlertStop(cur.token, cur.type);
+
+    cur.token = "";
 
     if (!playstackctl_ps_id.empty()) {
         if (keep_playstack) {
@@ -830,10 +853,8 @@ void AlertsAgent::stopSound(const std::string& reason, bool keep_playstack)
         playsync_manager->releaseSync(playstackctl_ps_id, getName());
     }
 
-    if (item->type != ALERT_TYPE_SLEEP && reason != "another_alert")
+    if (cur.type != "SLEEP" && reason != "another_alert")
         releaseFocus();
-
-    complete(item);
 }
 
 gboolean AlertsAgent::onSnoozeAvailabilityTimeout(gpointer userdata)

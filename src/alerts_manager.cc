@@ -605,6 +605,18 @@ bool AlertsManager::addItem(AlertItem* item)
         return false;
     }
 
+    if (item->type != ALERT_TYPE_ALARM) {
+        /* Remove existing TIMER/SLEEP */
+        for (auto const& iter : token_map) {
+            AlertItem* existing = iter.second;
+            if (existing->type != item->type)
+                continue;
+
+            removeItem(existing->token);
+            break;
+        }
+    }
+
     token_map[item->token] = item;
 
     return true;
