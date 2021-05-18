@@ -131,7 +131,6 @@ private:
 
     static gboolean onSnoozeAvailabilityTimeout(gpointer userdata);
 
-    NuguCapability::AlertsAudioPlayer* audioplayer;
     std::string playstackctl_ps_id;
     FocusState focus_state;
     NuguDirective* directive_for_sync;
@@ -146,6 +145,7 @@ private:
         std::string token;
         std::string type;
         std::string ps_id;
+        NuguCapability::AlertsAudioPlayer* audioplayer;
     } cur;
 
     std::string active_alarm_token;
