@@ -92,6 +92,7 @@ private:
     void releaseFocus();
     void playSound();
     void complete(AlertItem *item, bool start_snooze_timer = true);
+    void addPendingIgnored(AlertItem *item);
 
     /* Events */
     void sendEventCommon(const std::string& ename, const std::string& ps_id, const std::string& token, const std::string& error = "");
@@ -130,6 +131,7 @@ private:
     void onDurationTimeout(const std::string& token) override;
 
     static gboolean onSnoozeAvailabilityTimeout(gpointer userdata);
+    static gboolean onIgnoreTimeout(gpointer userdata);
 
     std::string playstackctl_ps_id;
     FocusState focus_state;
@@ -150,6 +152,8 @@ private:
 
     std::string active_alarm_token;
     guint snooze_availability_timer;
+    std::map<std::string, std::vector<std::string>> ignore_list;
+    guint ignore_timer;
 };
 
 #endif /* __NUGU_ALERTS_AGENT_H__ */

@@ -464,6 +464,127 @@ static void test_ignore3(void)
     g_assert(item->is_ignored == false);
 }
 
+#define DIR_SLEEP                                     \
+    "{"                                               \
+    "  \"activation\" : true,"                        \
+    "  \"alertType\" : \"SLEEP\","                    \
+    "  \"minDurationInSec\" : 180,"                   \
+    "  \"playServiceId\" : \"nugu.builtin.alarm\","   \
+    "  \"playStackControl\" : {"                      \
+    "    \"playServiceId\" : \"nugu.builtin.alarm\"," \
+    "    \"type\" : \"PUSH\""                         \
+    "  },"                                            \
+    "  \"scheduledTime\" : \"2021-05-12T14:25:38\","  \
+    "  \"token\" : \"token-sleep\""                   \
+    "}"
+
+static void test_ignore4(void)
+{
+    AlertsManager manager;
+    const AlertItem* item;
+    Json::Value root;
+    Json::Reader reader;
+    char hms_buf[32];
+    char ymdhms_buf[64];
+    struct tm now_tm;
+    time_t now;
+
+    now = time(NULL);
+    now += 3;
+
+    localtime_r(&now, &now_tm);
+    snprintf(hms_buf, sizeof(hms_buf), "%02d:%02d:%02d", now_tm.tm_hour,
+        now_tm.tm_min, now_tm.tm_sec);
+    snprintf(ymdhms_buf, sizeof(ymdhms_buf), "%04d-%02d-%02dT%s",
+        now_tm.tm_year + 1900, now_tm.tm_mon + 1, now_tm.tm_mday, hms_buf);
+
+    /* add everyday repeat alarm */
+    g_assert(reader.parse(DIR1_EVERYDAY, root) == true);
+    root["scheduledTime"] = hms_buf;
+    g_assert(manager.add(root) == true);
+
+    item = manager.findItem("dir1-everyday");
+    g_assert(item != NULL);
+    g_assert(item->is_activated == true);
+    g_assert(item->is_ignored == false);
+
+    /* add timer with same time */
+    g_assert(reader.parse(DIR_TIMER, root) == true);
+    root["scheduledTime"] = ymdhms_buf;
+    g_assert(manager.add(root) == true);
+
+    /* add sleep with same time */
+    g_assert(reader.parse(DIR_SLEEP, root) == true);
+    root["scheduledTime"] = ymdhms_buf;
+    g_assert(manager.add(root) == true);
+
+    item = manager.findItem("dir1-everyday");
+    g_assert(item != NULL);
+    g_assert(item->is_activated == true);
+    g_assert(item->is_ignored == true);
+
+    item = manager.findItem("token-timer");
+    g_assert(item != NULL);
+    g_assert(item->is_activated == true);
+    g_assert(item->is_ignored == true);
+
+    item = manager.findItem("token-sleep");
+    g_assert(item != NULL);
+    g_assert(item->is_activated == true);
+    g_assert(item->is_ignored == false);
+}
+
+static void test_ignore5(void)
+{
+    AlertsManager manager;
+    const AlertItem* item;
+    Json::Value root;
+    Json::Reader reader;
+    char hms_buf[32];
+    char ymdhms_buf[64];
+    struct tm now_tm;
+    time_t now;
+
+    now = time(NULL);
+    now += 3;
+
+    localtime_r(&now, &now_tm);
+    snprintf(hms_buf, sizeof(hms_buf), "%02d:%02d:%02d", now_tm.tm_hour,
+        now_tm.tm_min, now_tm.tm_sec);
+    snprintf(ymdhms_buf, sizeof(ymdhms_buf), "%04d-%02d-%02dT%s",
+        now_tm.tm_year + 1900, now_tm.tm_mon + 1, now_tm.tm_mday, hms_buf);
+
+    /* add timer */
+    g_assert(reader.parse(DIR_TIMER, root) == true);
+    root["scheduledTime"] = ymdhms_buf;
+    g_assert(manager.add(root) == true);
+
+    /* add sleep with same time */
+    g_assert(reader.parse(DIR_SLEEP, root) == true);
+    root["scheduledTime"] = ymdhms_buf;
+    g_assert(manager.add(root) == true);
+
+    /* add everyday repeat alarm with same time */
+    g_assert(reader.parse(DIR1_EVERYDAY, root) == true);
+    root["scheduledTime"] = hms_buf;
+    g_assert(manager.add(root) == true);
+
+    item = manager.findItem("token-timer");
+    g_assert(item != NULL);
+    g_assert(item->is_activated == true);
+    g_assert(item->is_ignored == true);
+
+    item = manager.findItem("token-sleep");
+    g_assert(item != NULL);
+    g_assert(item->is_activated == true);
+    g_assert(item->is_ignored == true);
+
+    item = manager.findItem("dir1-everyday");
+    g_assert(item != NULL);
+    g_assert(item->is_activated == true);
+    g_assert(item->is_ignored == false);
+}
+
 int main(int argc, char* argv[])
 {
 #if !GLIB_CHECK_VERSION(2, 36, 0)
@@ -482,6 +603,8 @@ int main(int argc, char* argv[])
     g_test_add_func("/alarm/ignore1", test_ignore1);
     g_test_add_func("/alarm/ignore2", test_ignore2);
     g_test_add_func("/alarm/ignore3", test_ignore3);
+    g_test_add_func("/alarm/ignore4", test_ignore4);
+    g_test_add_func("/alarm/ignore5", test_ignore5);
 
     return g_test_run();
 }
