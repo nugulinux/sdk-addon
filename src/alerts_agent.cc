@@ -92,6 +92,7 @@ void AlertsAgent::initialize()
     focus_state = FocusState::NONE;
     playstackctl_ps_id = "";
     snooze_availability_timer = 0;
+    ignore_timer = 0;
 
     cur.token = "";
     cur.audioplayer = nullptr;
@@ -105,6 +106,11 @@ void AlertsAgent::deInitialize()
     if (snooze_availability_timer) {
         g_source_remove(snooze_availability_timer);
         snooze_availability_timer = 0;
+    }
+
+    if (ignore_timer) {
+        g_source_remove(ignore_timer);
+        ignore_timer = 0;
     }
 
     active_alarm_token = "";
@@ -332,6 +338,17 @@ void AlertsAgent::parsingSetAlert(const char* message)
         sendEventSetAlertFailed(ps_id, token);
         return;
     }
+
+#ifdef IGNORE_TEST
+    /* To make the ignore test easier, the seconds of the time are always set to zero. */
+    if (schedule_time.size() > 18) {
+        nugu_error("before: %s", schedule_time.c_str());
+        schedule_time.at(17) = '0';
+        schedule_time.at(18) = '0';
+        nugu_error("after:  %s", schedule_time.c_str());
+        root["scheduledTime"] = schedule_time;
+    }
+#endif
 
     nugu_info("parsingSetAlert");
 
@@ -646,15 +663,18 @@ void AlertsAgent::onTimeout(const std::string& token)
     }
 
     /* deactivate the current alarm */
-    if (item->is_repeat == false) {
-        nugu_dbg("no repeat alert. deactivated");
+    if (item->is_repeat == false && item->is_ignored == false) {
+        nugu_dbg("no repeat alert. deactivate first");
         manager->deactivate(item);
     }
 
     if (is_enable == false) {
         nugu_info("AlertsAgent is disabled");
-        if (item->type == ALERT_TYPE_ALARM)
+        if (item->type == ALERT_TYPE_ALARM && item->is_ignored == false)
             active_alarm_token = item->token;
+
+        if (item->is_repeat == false && item->is_ignored == true)
+            manager->deactivate(item);
 
         complete(item);
         return;
@@ -662,8 +682,7 @@ void AlertsAgent::onTimeout(const std::string& token)
 
     if (item->is_ignored) {
         nugu_info("ignore the alert %s", item->token.c_str());
-        sendEventAlertIgnored(item->ps_id, { item->token });
-        complete(item, false);
+        addPendingIgnored(item);
         return;
     }
 
@@ -920,4 +939,36 @@ void AlertsAgent::complete(AlertItem* item, bool start_snooze_timer)
 
     manager->scheduling();
     manager->dump();
+}
+
+gboolean AlertsAgent::onIgnoreTimeout(gpointer userdata)
+{
+    AlertsAgent* agent = (AlertsAgent*)userdata;
+
+    agent->ignore_timer = 0;
+
+    nugu_info("send AlertIgnored event");
+
+    for (auto const& iter : agent->ignore_list) {
+        agent->sendEventAlertIgnored(iter.first, iter.second);
+        for (auto const& token_iter : iter.second) {
+            AlertItem* item = agent->manager->findItem(token_iter);
+            nugu_dbg("deactivate and complete the %s", item->token.c_str());
+            agent->manager->deactivate(item);
+            agent->complete(item, false);
+        }
+    }
+
+    agent->ignore_list.clear();
+
+    return FALSE;
+}
+
+void AlertsAgent::addPendingIgnored(AlertItem *item)
+{
+    if (ignore_timer == 0)
+        ignore_timer = g_timeout_add_seconds(1, onIgnoreTimeout, this);
+
+    nugu_dbg("add to pending ignored list");
+    ignore_list[item->ps_id].push_back(item->token);
 }
