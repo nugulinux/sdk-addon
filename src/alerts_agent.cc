@@ -359,6 +359,11 @@ void AlertsAgent::parsingSetAlert(const char* message)
         return;
     }
 
+    /* In the case of SLEEP alert, set the onAlertStart and onAlertStop event
+     * intervals to be maintained for at least 1 second. */
+    if (alert->type == ALERT_TYPE_SLEEP)
+        alert->duration_secs = 1;
+
     /* remove same token */
     removeAlert(token);
     if (alerts_listener)
@@ -832,8 +837,7 @@ void AlertsAgent::playSound()
         playsync_manager->startSync(playstackctl_ps_id, getName());
     }
 
-    if (item->type != ALERT_TYPE_SLEEP)
-        item->duration_timer_src = manager->addDurationTimeout(item->duration_secs, item->token);
+    item->duration_timer_src = manager->addDurationTimeout(item->duration_secs, item->token);
 
     if (item->type == ALERT_TYPE_TIMER) {
         if (alerts_listener)
@@ -864,7 +868,6 @@ void AlertsAgent::playSound()
         if (use_file && alerts_listener)
             alerts_listener->onFilePlayRequest(item->token, item->type_str, item->rsrc_type);
     } else if (item->type == ALERT_TYPE_SLEEP) {
-        stopSound("playSound, SLEEP");
         playsync_manager->clear();
         focus_manager->stopAllFocus();
     } else {
