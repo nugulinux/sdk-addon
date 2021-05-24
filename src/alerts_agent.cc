@@ -568,7 +568,8 @@ void AlertsAgent::parsingSetSnooze(const char* message)
         snooze_availability_timer = 0;
     }
 
-    manager->activate(item);
+    /* Enable the is_activated flag to scheduling (without JSON update) */
+    item->is_activated = true;
     item->snooze_secs = duration_sec;
 
     manager->scheduling();
