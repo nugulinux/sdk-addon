@@ -53,11 +53,11 @@ public:
     void addListener(IAudioPlayerListener* listener) override;
     void removeListener(IAudioPlayerListener* listener) override;
     std::string play() override;
-    std::string stop() override;
+    std::string stop(bool direct_access = false) override;
     std::string next() override;
     std::string prev() override;
-    std::string pause() override;
-    std::string resume() override;
+    std::string pause(bool direct_access = false) override;
+    std::string resume(bool direct_access = false) override;
     void seek(int msec) override;
     std::string requestFavoriteCommand(bool current_favorite) override;
     std::string requestRepeatCommand(RepeatType current_repeat) override;

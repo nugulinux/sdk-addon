@@ -117,7 +117,7 @@ std::string AlertsAudioPlayer::play()
     return "";
 }
 
-std::string AlertsAudioPlayer::stop()
+std::string AlertsAudioPlayer::stop(bool direct_access)
 {
     return "";
 }
@@ -132,12 +132,12 @@ std::string AlertsAudioPlayer::prev()
     return "";
 }
 
-std::string AlertsAudioPlayer::pause()
+std::string AlertsAudioPlayer::pause(bool direct_access)
 {
     return "";
 }
 
-std::string AlertsAudioPlayer::resume()
+std::string AlertsAudioPlayer::resume(bool direct_access)
 {
     return "";
 }
