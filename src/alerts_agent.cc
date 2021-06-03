@@ -563,9 +563,12 @@ void AlertsAgent::parsingSetSnooze(const char* message)
         return;
     }
 
-    if (snooze_availability_timer) {
-        g_source_remove(snooze_availability_timer);
-        snooze_availability_timer = 0;
+    nugu_info("set snooze! (%d secs)", duration_sec);
+
+    /* Clear previous snooze */
+    if (item->timer_src != 0 || item->snooze_secs != 0) {
+        nugu_dbg("clear previous timer source");
+        manager->done(item);
     }
 
     /* Enable the is_activated flag to scheduling (without JSON update) */
