@@ -64,6 +64,7 @@ struct _AlertItem {
     std::string scheduled_time;
     std::string ps_id;
     std::string rsrc_type; /* resource type */
+    bool has_routine;
     int wday_bitset; /* day-of-week bitset(enum day) */
     int wday_count;
     enum alert_type type;
