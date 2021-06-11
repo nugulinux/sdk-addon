@@ -69,7 +69,7 @@ public:
     // implements IDisplayHandler
     void displayRendered(const std::string& id);
     void displayCleared(const std::string& id);
-    void elementSelected(const std::string& id, const std::string& item_token);
+    void elementSelected(const std::string& id, const std::string& item_token, const std::string& postback = "");
     void informControlResult(const std::string& id, ControlType type, ControlDirection direction);
     void setListener(IDisplayListener* listener);
     void removeListener(IDisplayListener* listener);

@@ -198,7 +198,7 @@ void AlertsAudioPlayer::displayCleared(const std::string& id)
 {
 }
 
-void AlertsAudioPlayer::elementSelected(const std::string& id, const std::string& item_token)
+void AlertsAudioPlayer::elementSelected(const std::string& id, const std::string& item_token, const std::string& postback)
 {
 }
 

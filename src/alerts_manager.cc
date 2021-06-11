@@ -331,6 +331,7 @@ AlertItem* AlertsManager::generateAlert(const Json::Value& json_item)
     item->ps_id = json_item["playServiceId"].asString();
     item->rsrc_type = json_item["alarmResourceType"].asString();
     item->type_str = json_item["alertType"].asString();
+    item->has_routine = item->json_str.find("Routine.Start") != std::string::npos;
     item->audioplayer = nullptr;
     clock_gettime(CLOCK_REALTIME, &item->creation_time);
 

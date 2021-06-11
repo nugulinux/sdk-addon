@@ -22,6 +22,7 @@
 #include "alerts_audio_player.hh"
 #include "base_audio_player_listener.hh"
 
+#include <functional>
 #include <glib.h>
 #include <json/json.h>
 
@@ -42,6 +43,9 @@ public:
 
 class IAlertsListener : public ICapabilityListener {
 public:
+    using RoutineFailHandler = std::function<void(std::string&& error_code)>;
+
+public:
     virtual ~IAlertsListener() = default;
 
     virtual void onAlertStart(const std::string& token, const std::string& type, const std::string& resourceType) = 0;
@@ -58,6 +62,8 @@ public:
 
     virtual void onAlertAdd(const std::string& json) = 0;
     virtual void onAlertDelete(const std::string& token) = 0;
+
+    virtual void onRoutineActivate(const std::string& dialog_id, const std::string& payload, RoutineFailHandler&& fail_handler) = 0;
 };
 
 class AlertsAgent : public Capability,
@@ -91,8 +97,8 @@ public:
 private:
     void releaseFocus();
     void playSound();
-    void complete(AlertItem *item, bool start_snooze_timer = true);
-    void addPendingIgnored(AlertItem *item);
+    void complete(AlertItem* item, bool start_snooze_timer = true);
+    void addPendingIgnored(AlertItem* item);
 
     /* Events */
     void sendEventCommon(const std::string& ename, const std::string& ps_id, const std::string& token, const std::string& error = "");
@@ -154,6 +160,9 @@ private:
     guint snooze_availability_timer;
     std::map<std::string, std::vector<std::string>> ignore_list;
     guint ignore_timer;
+
+    std::string routine_payload;
+    std::string routine_dialog_id;
 };
 
 #endif /* __NUGU_ALERTS_AGENT_H__ */

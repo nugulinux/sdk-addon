@@ -93,6 +93,8 @@ void AlertsAgent::initialize()
     playstackctl_ps_id = "";
     snooze_availability_timer = 0;
     ignore_timer = 0;
+    routine_payload.clear();
+    routine_dialog_id.clear();
 
     cur.token = "";
     cur.audioplayer = nullptr;
@@ -148,7 +150,7 @@ void AlertsAgent::onFocusChanged(FocusState state)
     case FocusState::NONE:
         if (cur.audioplayer) {
             nugu_info("remove audioplayer");
-            NuguCapability::AlertsAudioPlayer *tmp = cur.audioplayer;
+            NuguCapability::AlertsAudioPlayer* tmp = cur.audioplayer;
             cur.audioplayer = nullptr;
 
             IMediaPlayer* player = tmp->getPlayer();
@@ -386,7 +388,7 @@ void AlertsAgent::parsingSetAlert(const char* message)
     }
 
     if (alerts_listener)
-        alerts_listener->onAlertAdd(token);
+        alerts_listener->onAlertAdd(message);
 
     manager->scheduling();
     manager->dump();
@@ -486,7 +488,7 @@ void AlertsAgent::parsingDeliveryAlertAsset(const char* message)
 
     nugu_info("parsingDeliveryAlertAsset");
 
-    AlertItem *item = manager->findItem(token);
+    AlertItem* item = manager->findItem(token);
     if (!item) {
         nugu_error("can't find the item");
         return;
@@ -507,6 +509,12 @@ void AlertsAgent::parsingDeliveryAlertAsset(const char* message)
 
         type = header["namespace"].asString() + "." + header["name"].asString();
         nugu_dbg("asset namespace: %s", type.c_str());
+
+        if (type == "Routine.Start") {
+            routine_dialog_id = header["dialogRequestId"].asString();
+            routine_payload = writer.write(payload);
+            continue;
+        }
 
         if (item->audioplayer == nullptr) {
             nugu_dbg("create audioplayer for %s", token.c_str());
@@ -596,7 +604,7 @@ void AlertsAgent::mediaStateChanged(NuguCapability::AudioPlayerState state, cons
         return;
     }
 
-    AlertItem *item = manager->findItem(cur.token);
+    AlertItem* item = manager->findItem(cur.token);
     if (!item) {
         nugu_error("can't find the alert item");
         return;
@@ -643,7 +651,7 @@ void AlertsAgent::durationChanged(int duration)
     if (cur.token == "")
         return;
 
-    AlertItem *item = manager->findItem(cur.token);
+    AlertItem* item = manager->findItem(cur.token);
     if (!item) {
         nugu_error("can't find the alert item");
         return;
@@ -714,6 +722,17 @@ void AlertsAgent::onTimeout(const std::string& token)
 
     active_alarm_token = "";
 
+    if (item->has_routine) {
+        auto fail_handler([&](std::string&& error_code) {
+            sendEventAlertFailed(item->ps_id, item->token, error_code);
+        });
+
+        alerts_listener ? alerts_listener->onRoutineActivate(routine_dialog_id, routine_payload, fail_handler)
+                        : fail_handler("UNKNOWN_ERROR");
+
+        return;
+    }
+
     if (cur.token == "") {
         cur.token = item->token;
 
@@ -757,7 +776,7 @@ void AlertsAgent::onAssetRequireTimeout(const std::string& token)
         return;
     }
 
-    if (item->rsrc_type == "MUSIC" || item->rsrc_type == "TTS")
+    if (item->rsrc_type == "MUSIC" || item->rsrc_type == "TTS" || item->has_routine)
         sendEventAlertAssetRequired(item->ps_id, item->token);
 }
 
@@ -832,7 +851,7 @@ void AlertsAgent::playSound()
         return;
     }
 
-    AlertItem *item = manager->findItem(cur.token);
+    AlertItem* item = manager->findItem(cur.token);
     if (!item) {
         nugu_error("can't find the current alert");
         return;
@@ -983,7 +1002,7 @@ gboolean AlertsAgent::onIgnoreTimeout(gpointer userdata)
     return FALSE;
 }
 
-void AlertsAgent::addPendingIgnored(AlertItem *item)
+void AlertsAgent::addPendingIgnored(AlertItem* item)
 {
     if (ignore_timer == 0)
         ignore_timer = g_timeout_add_seconds(1, onIgnoreTimeout, this);
