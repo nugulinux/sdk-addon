@@ -41,6 +41,9 @@ void LocationAgent::updateInfoForContext(Json::Value& ctx)
         location_listener->requestContext(location_info);
     }
 
+    location_info.latitude = "37.4731333";
+    location_info.longitude = "127.1374098";
+
     // set current if latitude and longitude conditions are satisfied
     if (!location_info.latitude.empty() && !location_info.longitude.empty()) {
         Json::Value current;
@@ -49,6 +52,16 @@ void LocationAgent::updateInfoForContext(Json::Value& ctx)
         current["longitude"] = location_info.longitude;
         location["current"] = current;
     }
+
+#if 0
+      "Location":{
+         "version":"1.0",
+         "current":{
+            "latitude":"37.4731333",
+            "longitude":"127.1374098"
+         }
+      }
+#endif
 
     ctx[getName()] = location;
 }

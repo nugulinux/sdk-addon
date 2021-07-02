@@ -36,5 +36,25 @@ void AutoRadioAgent::updateInfoForContext(Json::Value& ctx)
 
     auto_radio["version"] = getVersion();
 
+    auto_radio["playerActivity"] = "STOPPED";
+    auto_radio["channel"];
+    auto_radio["recentlyPlayedChannel"]["type"] = "";
+    auto_radio["recentlyPlayedChannel"]["value"] = "";
+    auto_radio["supportFrequencyTypes"][0] = "FM";
+#if 0
+      "AutoRadio":{
+         "version":"1.0",
+         "playerActivity":"STOPPED",
+         "channel":null,
+         "recentlyPlayedChannel":{
+            "type":"",
+            "value":""
+         },
+         "supportFrequencyTypes":[
+            "FM"
+         ]
+      }
+#endif
+
     ctx[getName()] = auto_radio;
 }

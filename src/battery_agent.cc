@@ -38,10 +38,22 @@ void BatteryAgent::updateInfoForContext(Json::Value& ctx)
         battery_listener->requestUpdateInformation();
 
     battery["version"] = getVersion();
+
+    battery_level = 45;
+    battery_charging = true;
+
     if (battery_level >= 0 && battery_level <= 100)
         battery["level"] = battery_level;
     battery["charging"] = battery_charging;
-    battery["approximateLevel"] = battery_approximate_level;
+    //battery["approximateLevel"] = battery_approximate_level;
+
+#if 0
+      "Battery":{
+         "version":"1.0",
+         "level":45,
+         "charging":true
+      }
+#endif
     ctx[getName()] = battery;
 }
 

@@ -39,7 +39,8 @@ void BluetoothAgent::updateInfoForContext(Json::Value& ctx)
 
     bluetooth["version"] = getVersion();
 
-    device["name"] = "AGL_LINUX_DEV";
+    // device["name"] = "AGL_LINUX_DEV";
+    device["name"] = "MOBILE_ANDROID_DEV";
     device["status"] = "ON";
     profiles[0]["name"] = "HSP";
     profiles[0]["enabled"] = "TRUE";
@@ -54,11 +55,49 @@ void BluetoothAgent::updateInfoForContext(Json::Value& ctx)
     device["profiles"] = profiles;
 
     active_device["id"] = "-1";
-    active_device["name"] = "AGL_LINUX_DEV_BT_DEVICE";
+    // active_device["name"] = "AGL_LINUX_DEV_BT_DEVICE";
+    active_device["name"] = "MOBILE_ANDROID_DEV_BT_DEVICE";
     active_device["streaming"] = "UNUSABLE";
 
     bluetooth["device"] = device;
     bluetooth["activeDevice"] = active_device;
+
+#if 0
+      "Bluetooth":{
+         "version":"1.1",
+         "device":{
+            "name":"MOBILE_ANDROID_DEV",
+            "status":"ON",
+            "profiles":[
+               {
+                  "name":"HSP",
+                  "enabled":"TRUE"
+               },
+               {
+                  "name":"A2DP",
+                  "enabled":"TRUE"
+               },
+               {
+                  "name":"PBAP",
+                  "enabled":"TRUE"
+               },
+               {
+                  "name":"MAP",
+                  "enabled":"TRUE"
+               },
+               {
+                  "name":"PAN",
+                  "enabled":"FALSE"
+               }
+            ]
+         },
+         "activeDevice":{
+            "id":"-1",
+            "name":"MOBILE_ANDROID_DEV_BT_DEVICE",
+            "streaming":"UNUSABLE"
+         }
+      }
+#endif
 
     ctx[getName()] = bluetooth;
 }
