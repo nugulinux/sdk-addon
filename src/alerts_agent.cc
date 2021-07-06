@@ -148,13 +148,15 @@ void AlertsAgent::onFocusChanged(FocusState state)
     case FocusState::NONE:
         if (cur.audioplayer) {
             nugu_info("remove audioplayer");
-            IMediaPlayer* player = cur.audioplayer->getPlayer();
+            NuguCapability::AlertsAudioPlayer *tmp = cur.audioplayer;
+            cur.audioplayer = nullptr;
+
+            IMediaPlayer* player = tmp->getPlayer();
             if (player != nullptr)
                 player->stop();
 
-            cur.audioplayer->deInitialize();
-            delete cur.audioplayer;
-            cur.audioplayer = nullptr;
+            tmp->deInitialize();
+            delete tmp;
         }
         break;
     }
@@ -647,7 +649,7 @@ void AlertsAgent::durationChanged(int duration)
         return;
     }
 
-    nugu_dbg("media resource length: %d secs", duration);
+    nugu_info("media resource length: %d secs", duration);
 
     if (duration <= item->duration_secs)
         return;
@@ -657,7 +659,11 @@ void AlertsAgent::durationChanged(int duration)
     if (item->duration_timer_src != 0)
         manager->removeTimeout(item->duration_timer_src);
 
-    item->duration_timer_src = manager->addDurationTimeout(duration, item->token);
+    /* 1 second is added to prevent the issue where the `PlaybackStopped`
+     * event is sent instead of the `PlaybackFinished` event due to a timing
+     * issue between the completion of music playback and completion of the
+     * alarm duration. */
+    item->duration_timer_src = manager->addDurationTimeout(duration + 1, item->token);
 }
 
 /* callback in thread context */
