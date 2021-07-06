@@ -323,13 +323,13 @@ void AlertsAudioPlayer::sendEventPlaybackFailed(PlaybackError err, const std::st
 
 void AlertsAudioPlayer::sendEventProgressReportDelayElapsed(EventResultCallback cb)
 {
-    nugu_dbg("report_delay_time: %d, position: %d", report_delay_time / 1000, cur_player->position());
+    nugu_info("report_delay_time: %d, position: %d", report_delay_time / 1000, cur_player->position());
     sendEventCommon("ProgressReportDelayElapsed", std::move(cb));
 }
 
 void AlertsAudioPlayer::sendEventProgressReportIntervalElapsed(EventResultCallback cb)
 {
-    nugu_dbg("report_interval_time: %d, position: %d", report_interval_time / 1000, cur_player->position());
+    nugu_info("report_interval_time: %d, position: %d", report_interval_time / 1000, cur_player->position());
     sendEventCommon("ProgressReportIntervalElapsed", std::move(cb));
 }
 
@@ -349,6 +349,8 @@ std::string AlertsAudioPlayer::sendEventCommon(const std::string& ename, EventRe
         nugu_error("there is something wrong [%s]", ename.c_str());
         return "";
     }
+
+    nugu_info("send AudioPlayer.%s", ename.c_str());
 
     root["token"] = cur_token;
     root["playServiceId"] = ps_id;
@@ -634,6 +636,7 @@ void AlertsAudioPlayer::mediaEventReport(MediaPlayerEvent event)
     case MediaPlayerEvent::PLAYING_MEDIA_FINISHED:
         nugu_dbg("PLAYING_MEDIA_FINISHED");
         if (cur_player == media_player) {
+            sendEventPlaybackFinished();
             cur_player->setPosition(0);
             cur_player->play();
         } else if (cur_player == tts_player) {
