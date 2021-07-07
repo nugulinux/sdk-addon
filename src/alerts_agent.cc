@@ -651,13 +651,19 @@ void AlertsAgent::durationChanged(int duration)
 
     nugu_info("media resource length: %d secs", duration);
 
-    if (duration <= item->duration_secs)
+    if (item->duration_timer_src != 0)
+        manager->removeTimeout(item->duration_timer_src);
+
+    if (duration < item->duration_secs) {
+        /* Restart alarm duration timer to exclude audio buffering time */
+        item->duration_timer_src = manager->addDurationTimeout(item->duration_secs, item->token);
         return;
+    }
 
     nugu_dbg("media resource length is longer than the alarm duration");
 
-    if (item->duration_timer_src != 0)
-        manager->removeTimeout(item->duration_timer_src);
+    if (cur.audioplayer)
+        cur.audioplayer->setRepeat(false);
 
     /* 1 second is added to prevent the issue where the `PlaybackStopped`
      * event is sent instead of the `PlaybackFinished` event due to a timing

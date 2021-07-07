@@ -41,6 +41,7 @@ AlertsAudioPlayer::AlertsAudioPlayer()
     , cur_token("")
     , pre_ref_dialog_id("")
     , is_finished(false)
+    , is_repeat(true)
     , cur_ndir(nullptr)
 {
 }
@@ -637,8 +638,11 @@ void AlertsAudioPlayer::mediaEventReport(MediaPlayerEvent event)
         nugu_dbg("PLAYING_MEDIA_FINISHED");
         if (cur_player == media_player) {
             sendEventPlaybackFinished();
-            cur_player->setPosition(0);
-            cur_player->play();
+            if (is_repeat) {
+                nugu_info("Repeat");
+                cur_player->setPosition(0);
+                cur_player->play();
+            }
         } else if (cur_player == tts_player) {
             is_finished = true;
             mediaStateChanged(MediaPlayerState::STOPPED);
@@ -763,6 +767,11 @@ bool AlertsAudioPlayer::isTTSPlayer()
         return true;
 
     return false;
+}
+
+void AlertsAudioPlayer::setRepeat(bool repeat)
+{
+    is_repeat = repeat;
 }
 
 } // NuguCapability
