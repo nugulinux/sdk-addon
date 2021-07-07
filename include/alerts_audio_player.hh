@@ -102,6 +102,8 @@ public:
     bool playTTS();
     bool isTTSPlayer();
 
+    void setRepeat(bool repeat);
+
 private:
     std::string sendEventCommon(const std::string& ename, EventResultCallback cb = nullptr);
 
@@ -135,6 +137,7 @@ private:
     std::string cur_dialog_id;
     bool is_finished;
     std::vector<IAudioPlayerListener*> aplayer_listeners;
+    bool is_repeat;
 
     NuguDirective* cur_ndir;
     bool destroy_directive_by_agent = false;
